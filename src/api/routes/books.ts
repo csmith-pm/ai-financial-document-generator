@@ -1,10 +1,10 @@
 import type { FastifyInstance } from "fastify";
 import { eq, and } from "drizzle-orm";
 import {
-  budgetBooks,
-  budgetBookSections,
-  budgetBookReviews,
-  budgetBookJobs,
+  documents,
+  documentSections,
+  documentReviews,
+  documentJobs,
 } from "../../db/schema.js";
 import type { DrizzleInstance } from "../../db/connection.js";
 import type { StorageProvider, QueueProvider } from "../../core/providers.js";
@@ -31,9 +31,10 @@ export async function booksRoutes(
     const { tenantId, userId } = request.auth;
 
     const [book] = await db
-      .insert(budgetBooks)
+      .insert(documents)
       .values({
         tenantId,
+        docType: body.docType,
         title: body.title,
         fiscalYear: body.fiscalYear,
         dataSource: body.dataSource,
@@ -52,9 +53,9 @@ export async function booksRoutes(
     const { tenantId } = request.auth;
     const books = await db
       .select()
-      .from(budgetBooks)
-      .where(eq(budgetBooks.tenantId, tenantId))
-      .orderBy(budgetBooks.createdAt);
+      .from(documents)
+      .where(eq(documents.tenantId, tenantId))
+      .orderBy(documents.createdAt);
     return books;
   });
 
@@ -65,8 +66,8 @@ export async function booksRoutes(
 
     const [book] = await db
       .select()
-      .from(budgetBooks)
-      .where(and(eq(budgetBooks.id, id), eq(budgetBooks.tenantId, tenantId)))
+      .from(documents)
+      .where(and(eq(documents.id, id), eq(documents.tenantId, tenantId)))
       .limit(1);
 
     if (!book) {
@@ -82,9 +83,9 @@ export async function booksRoutes(
     const { tenantId } = request.auth;
 
     const deleted = await db
-      .delete(budgetBooks)
-      .where(and(eq(budgetBooks.id, id), eq(budgetBooks.tenantId, tenantId)))
-      .returning({ id: budgetBooks.id });
+      .delete(documents)
+      .where(and(eq(documents.id, id), eq(documents.tenantId, tenantId)))
+      .returning({ id: documents.id });
 
     if (deleted.length === 0) {
       reply.status(404).send({ error: "Book not found" });
@@ -109,13 +110,13 @@ export async function booksRoutes(
     await storage.upload(s3Key, buffer, data.mimetype);
 
     await db
-      .update(budgetBooks)
+      .update(documents)
       .set({
-        uploadedBudgetS3Key: s3Key,
+        uploadedDataS3Key: s3Key,
         dataSource: "upload",
         updatedAt: new Date(),
       })
-      .where(and(eq(budgetBooks.id, id), eq(budgetBooks.tenantId, tenantId)));
+      .where(and(eq(documents.id, id), eq(documents.tenantId, tenantId)));
 
     return { s3Key };
   });
@@ -136,9 +137,9 @@ export async function booksRoutes(
     await storage.upload(s3Key, buffer, "application/pdf");
 
     await db
-      .update(budgetBooks)
+      .update(documents)
       .set({ priorYearPdfS3Key: s3Key, updatedAt: new Date() })
-      .where(and(eq(budgetBooks.id, id), eq(budgetBooks.tenantId, tenantId)));
+      .where(and(eq(documents.id, id), eq(documents.tenantId, tenantId)));
 
     return { s3Key };
   });
@@ -150,8 +151,8 @@ export async function booksRoutes(
 
     const [book] = await db
       .select()
-      .from(budgetBooks)
-      .where(and(eq(budgetBooks.id, id), eq(budgetBooks.tenantId, tenantId)))
+      .from(documents)
+      .where(and(eq(documents.id, id), eq(documents.tenantId, tenantId)))
       .limit(1);
 
     if (!book) {
@@ -179,8 +180,8 @@ export async function booksRoutes(
     ] as const;
 
     for (const jobType of jobTypes) {
-      await db.insert(budgetBookJobs).values({
-        budgetBookId: id,
+      await db.insert(documentJobs).values({
+        documentId: id,
         tenantId,
         jobType,
         status: "pending",
@@ -190,11 +191,11 @@ export async function booksRoutes(
 
     // Enqueue generation job
     await queue.enqueue("generate-budget-book", {
-      budgetBookId: id,
+      documentId: id,
       tenantId,
     });
 
-    reply.status(202).send({ message: "Generation started", budgetBookId: id });
+    reply.status(202).send({ message: "Generation started", documentId: id });
   });
 
   // POST /api/books/:id/regenerate — regenerate after addressing todos
@@ -204,8 +205,8 @@ export async function booksRoutes(
 
     const [book] = await db
       .select()
-      .from(budgetBooks)
-      .where(and(eq(budgetBooks.id, id), eq(budgetBooks.tenantId, tenantId)))
+      .from(documents)
+      .where(and(eq(documents.id, id), eq(documents.tenantId, tenantId)))
       .limit(1);
 
     if (!book) {
@@ -225,11 +226,11 @@ export async function booksRoutes(
     }
 
     await queue.enqueue("regenerate-budget-book", {
-      budgetBookId: id,
+      documentId: id,
       tenantId,
     });
 
-    reply.status(202).send({ message: "Regeneration started", budgetBookId: id });
+    reply.status(202).send({ message: "Regeneration started", documentId: id });
   });
 
   // GET /api/books/:id/progress — get job progress
@@ -238,9 +239,9 @@ export async function booksRoutes(
     const { tenantId } = request.auth;
 
     const [book] = await db
-      .select({ id: budgetBooks.id })
-      .from(budgetBooks)
-      .where(and(eq(budgetBooks.id, id), eq(budgetBooks.tenantId, tenantId)))
+      .select({ id: documents.id })
+      .from(documents)
+      .where(and(eq(documents.id, id), eq(documents.tenantId, tenantId)))
       .limit(1);
 
     if (!book) {
@@ -250,11 +251,11 @@ export async function booksRoutes(
 
     const jobs = await db
       .select()
-      .from(budgetBookJobs)
-      .where(eq(budgetBookJobs.budgetBookId, id))
-      .orderBy(budgetBookJobs.createdAt);
+      .from(documentJobs)
+      .where(eq(documentJobs.documentId, id))
+      .orderBy(documentJobs.createdAt);
 
-    return { budgetBookId: id, jobs };
+    return { documentId: id, jobs };
   });
 
   // GET /api/books/:id/preview — get web preview data
@@ -264,12 +265,12 @@ export async function booksRoutes(
 
     const [book] = await db
       .select({
-        id: budgetBooks.id,
-        webPreviewData: budgetBooks.webPreviewData,
-        status: budgetBooks.status,
+        id: documents.id,
+        webPreviewData: documents.webPreviewData,
+        status: documents.status,
       })
-      .from(budgetBooks)
-      .where(and(eq(budgetBooks.id, id), eq(budgetBooks.tenantId, tenantId)))
+      .from(documents)
+      .where(and(eq(documents.id, id), eq(documents.tenantId, tenantId)))
       .limit(1);
 
     if (!book) {
@@ -279,9 +280,9 @@ export async function booksRoutes(
 
     const sections = await db
       .select()
-      .from(budgetBookSections)
-      .where(eq(budgetBookSections.budgetBookId, id))
-      .orderBy(budgetBookSections.sectionOrder);
+      .from(documentSections)
+      .where(eq(documentSections.documentId, id))
+      .orderBy(documentSections.sectionOrder);
 
     return { book, sections };
   });
@@ -293,10 +294,10 @@ export async function booksRoutes(
 
     const [book] = await db
       .select({
-        generatedPdfS3Key: budgetBooks.generatedPdfS3Key,
+        generatedPdfS3Key: documents.generatedPdfS3Key,
       })
-      .from(budgetBooks)
-      .where(and(eq(budgetBooks.id, id), eq(budgetBooks.tenantId, tenantId)))
+      .from(documents)
+      .where(and(eq(documents.id, id), eq(documents.tenantId, tenantId)))
       .limit(1);
 
     if (!book) {
@@ -319,9 +320,9 @@ export async function booksRoutes(
     const { tenantId } = request.auth;
 
     const [book] = await db
-      .select({ id: budgetBooks.id })
-      .from(budgetBooks)
-      .where(and(eq(budgetBooks.id, id), eq(budgetBooks.tenantId, tenantId)))
+      .select({ id: documents.id })
+      .from(documents)
+      .where(and(eq(documents.id, id), eq(documents.tenantId, tenantId)))
       .limit(1);
 
     if (!book) {
@@ -331,10 +332,10 @@ export async function booksRoutes(
 
     const reviews = await db
       .select()
-      .from(budgetBookReviews)
-      .where(eq(budgetBookReviews.budgetBookId, id))
-      .orderBy(budgetBookReviews.createdAt);
+      .from(documentReviews)
+      .where(eq(documentReviews.documentId, id))
+      .orderBy(documentReviews.createdAt);
 
-    return { budgetBookId: id, reviews };
+    return { documentId: id, reviews };
   });
 }

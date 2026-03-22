@@ -1,19 +1,15 @@
 import { describe, it, expect } from "vitest";
 import {
-  budgetBooks,
-  budgetBookSections,
-  budgetBookReviews,
-  budgetBookJobs,
+  documents,
+  documentSections,
+  documentReviews,
+  documentJobs,
   agentSkills,
-  budgetBookTodos,
-  budgetBookTodoMessages,
-  budgetBookStatusEnum,
-  budgetBookSectionTypeEnum,
-  budgetBookReviewerTypeEnum,
-  budgetBookJobTypeEnum,
-  budgetBookJobStatusEnum,
-  budgetBookDataSourceEnum,
-  agentTypeEnum,
+  documentTodos,
+  documentTodoMessages,
+  documentStatusEnum,
+  jobStatusEnum,
+  dataSourceEnum,
   skillScopeEnum,
   skillStatusEnum,
   todoCategoryEnum,
@@ -25,25 +21,21 @@ import {
 describe("Database Schema", () => {
   describe("Table exports", () => {
     it("exports all 7 core tables", () => {
-      expect(budgetBooks).toBeDefined();
-      expect(budgetBookSections).toBeDefined();
-      expect(budgetBookReviews).toBeDefined();
-      expect(budgetBookJobs).toBeDefined();
+      expect(documents).toBeDefined();
+      expect(documentSections).toBeDefined();
+      expect(documentReviews).toBeDefined();
+      expect(documentJobs).toBeDefined();
       expect(agentSkills).toBeDefined();
-      expect(budgetBookTodos).toBeDefined();
-      expect(budgetBookTodoMessages).toBeDefined();
+      expect(documentTodos).toBeDefined();
+      expect(documentTodoMessages).toBeDefined();
     });
   });
 
   describe("Enum exports", () => {
     it("exports all enums", () => {
-      expect(budgetBookStatusEnum).toBeDefined();
-      expect(budgetBookSectionTypeEnum).toBeDefined();
-      expect(budgetBookReviewerTypeEnum).toBeDefined();
-      expect(budgetBookJobTypeEnum).toBeDefined();
-      expect(budgetBookJobStatusEnum).toBeDefined();
-      expect(budgetBookDataSourceEnum).toBeDefined();
-      expect(agentTypeEnum).toBeDefined();
+      expect(documentStatusEnum).toBeDefined();
+      expect(jobStatusEnum).toBeDefined();
+      expect(dataSourceEnum).toBeDefined();
       expect(skillScopeEnum).toBeDefined();
       expect(skillStatusEnum).toBeDefined();
       expect(todoCategoryEnum).toBeDefined();
@@ -52,8 +44,8 @@ describe("Database Schema", () => {
       expect(todoMessageRoleEnum).toBeDefined();
     });
 
-    it("budgetBookStatusEnum has all expected values", () => {
-      expect(budgetBookStatusEnum.enumValues).toEqual([
+    it("documentStatusEnum has all expected values", () => {
+      expect(documentStatusEnum.enumValues).toEqual([
         "draft",
         "analyzing",
         "generating",
@@ -64,51 +56,18 @@ describe("Database Schema", () => {
         "failed",
       ]);
     });
-
-    it("budgetBookSectionTypeEnum has all expected values", () => {
-      expect(budgetBookSectionTypeEnum.enumValues).toEqual([
-        "cover",
-        "toc",
-        "executive_summary",
-        "community_profile",
-        "revenue_summary",
-        "expenditure_summary",
-        "personnel_summary",
-        "capital_summary",
-        "multi_year_outlook",
-        "appendix",
-      ]);
-    });
-
-    it("agentTypeEnum has all 4 agent types", () => {
-      expect(agentTypeEnum.enumValues).toEqual([
-        "bb_creator",
-        "bb_reviewer",
-        "ada_reviewer",
-        "bb_advisor",
-      ]);
-    });
-
-    it("budgetBookJobTypeEnum has all 8 job types", () => {
-      expect(budgetBookJobTypeEnum.enumValues).toEqual([
-        "analyze_prior_pdf",
-        "generate_sections",
-        "render_charts",
-        "gfoa_review",
-        "ada_review",
-        "revise_sections",
-        "render_pdf",
-        "finalize",
-      ]);
-    });
   });
 
-  describe("budgetBooks table structure", () => {
-    const columns = budgetBooks as Record<string, unknown>;
+  describe("documents table structure", () => {
+    const columns = documents as Record<string, unknown>;
 
     it("has tenantId column (not customerId)", () => {
       expect(columns).toHaveProperty("tenantId");
       expect(columns).not.toHaveProperty("customerId");
+    });
+
+    it("has docType column for multi-document support", () => {
+      expect(columns).toHaveProperty("docType");
     });
 
     it("has text-type worksheetId (no FK)", () => {
@@ -123,10 +82,11 @@ describe("Database Schema", () => {
       const expectedColumns = [
         "id",
         "tenantId",
+        "docType",
         "worksheetId",
         "versionId",
         "dataSource",
-        "uploadedBudgetS3Key",
+        "uploadedDataS3Key",
         "title",
         "fiscalYear",
         "status",
@@ -146,14 +106,18 @@ describe("Database Schema", () => {
     });
   });
 
-  describe("budgetBookSections table structure", () => {
+  describe("documentSections table structure", () => {
     it("has tenantId (not customerId)", () => {
-      expect(budgetBookSections).toHaveProperty("tenantId");
-      expect(budgetBookSections).not.toHaveProperty("customerId");
+      expect(documentSections).toHaveProperty("tenantId");
+      expect(documentSections).not.toHaveProperty("customerId");
     });
 
-    it("has budgetBookId for cascade delete", () => {
-      expect(budgetBookSections).toHaveProperty("budgetBookId");
+    it("has documentId for cascade delete", () => {
+      expect(documentSections).toHaveProperty("documentId");
+    });
+
+    it("uses text sectionType (not enum)", () => {
+      expect(documentSections).toHaveProperty("sectionType");
     });
   });
 
@@ -162,16 +126,20 @@ describe("Database Schema", () => {
       expect(agentSkills).toHaveProperty("tenantId");
       expect(agentSkills).not.toHaveProperty("customerId");
     });
+
+    it("uses text agentType (not enum)", () => {
+      expect(agentSkills).toHaveProperty("agentType");
+    });
   });
 
-  describe("budgetBookTodos table structure", () => {
+  describe("documentTodos table structure", () => {
     it("has tenantId (not customerId)", () => {
-      expect(budgetBookTodos).toHaveProperty("tenantId");
-      expect(budgetBookTodos).not.toHaveProperty("customerId");
+      expect(documentTodos).toHaveProperty("tenantId");
+      expect(documentTodos).not.toHaveProperty("customerId");
     });
 
     it("has sourceReviewId as plain uuid (no FK reference)", () => {
-      expect(budgetBookTodos).toHaveProperty("sourceReviewId");
+      expect(documentTodos).toHaveProperty("sourceReviewId");
     });
   });
 });

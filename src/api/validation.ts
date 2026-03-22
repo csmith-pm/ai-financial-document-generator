@@ -3,6 +3,7 @@ import { z } from "zod";
 // ---- Books ----
 
 export const createBookSchema = z.object({
+  docType: z.string().min(1).max(50).default("budget_book"),
   title: z.string().min(1).max(200),
   fiscalYear: z.number().int().min(2000).max(2100),
   dataSource: z.enum(["module", "upload"]).default("module"),

@@ -3,29 +3,27 @@
  * and GFOA review recommendations.
  */
 
-import { budgetBookTodos, type budgetBookSectionTypeEnum } from "../../db/schema.js";
+import { documentTodos } from "../../db/schema.js";
 import type { DrizzleInstance } from "../../db/connection.js";
 import type { DetectedGap } from "./detector.js";
-
-type SectionTypeEnum = (typeof budgetBookSectionTypeEnum.enumValues)[number] | null;
 
 /**
  * Create todos from detected data gaps.
  */
 export async function createTodosFromDataGaps(
   db: DrizzleInstance,
-  budgetBookId: string,
+  documentId: string,
   tenantId: string,
   gaps: DetectedGap[]
 ): Promise<void> {
   for (const gap of gaps) {
-    await db.insert(budgetBookTodos).values({
-      budgetBookId,
+    await db.insert(documentTodos).values({
+      documentId,
       tenantId,
       category: gap.category,
       title: gap.title,
       description: gap.description,
-      sectionType: gap.sectionType as SectionTypeEnum,
+      sectionType: gap.sectionType,
       status: "open",
       priority: gap.priority,
     });
@@ -45,8 +43,8 @@ interface GfoaReviewResult {
   recommendations: GfoaRecommendation[];
 }
 
-/** Map reviewer section names to our section type enum values */
-function mapSectionType(section: string): SectionTypeEnum {
+/** Map reviewer section names to section type strings */
+function mapSectionType(section: string): string | null {
   const normalized = section.toLowerCase().replace(/[\s-]/g, "_");
   const sectionMap: Record<string, string> = {
     executive_summary: "executive_summary",
@@ -64,7 +62,7 @@ function mapSectionType(section: string): SectionTypeEnum {
     long_term_outlook: "multi_year_outlook",
     appendix: "appendix",
   };
-  return (sectionMap[normalized] as SectionTypeEnum) ?? null;
+  return sectionMap[normalized] ?? null;
 }
 
 /**
@@ -73,7 +71,7 @@ function mapSectionType(section: string): SectionTypeEnum {
  */
 export async function createTodosFromGfoaReview(
   db: DrizzleInstance,
-  budgetBookId: string,
+  documentId: string,
   tenantId: string,
   review: GfoaReviewResult,
   reviewId: string
@@ -83,8 +81,8 @@ export async function createTodosFromGfoaReview(
   );
 
   for (const rec of actionableRecs) {
-    await db.insert(budgetBookTodos).values({
-      budgetBookId,
+    await db.insert(documentTodos).values({
+      documentId,
       tenantId,
       category: "quality",
       title: rec.issue.length > 100 ? rec.issue.substring(0, 97) + "..." : rec.issue,

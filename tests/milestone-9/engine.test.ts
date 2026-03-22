@@ -33,12 +33,12 @@ describe("createBudgetBookEngine", () => {
 
   it("re-exports schema tables", async () => {
     const mod = await import("../../src/index.js");
-    expect(mod.budgetBooks).toBeDefined();
-    expect(mod.budgetBookSections).toBeDefined();
-    expect(mod.budgetBookReviews).toBeDefined();
-    expect(mod.budgetBookJobs).toBeDefined();
+    expect(mod.documents).toBeDefined();
+    expect(mod.documentSections).toBeDefined();
+    expect(mod.documentReviews).toBeDefined();
+    expect(mod.documentJobs).toBeDefined();
     expect(mod.agentSkills).toBeDefined();
-    expect(mod.budgetBookTodos).toBeDefined();
-    expect(mod.budgetBookTodoMessages).toBeDefined();
+    expect(mod.documentTodos).toBeDefined();
+    expect(mod.documentTodoMessages).toBeDefined();
   });
 });

@@ -11,9 +11,9 @@ import {
   index,
 } from "drizzle-orm/pg-core";
 
-// ---- Enums ----
+// ---- Enums (universal across all document types) ----
 
-export const budgetBookStatusEnum = pgEnum("budget_book_status", [
+export const documentStatusEnum = pgEnum("document_status", [
   "draft",
   "analyzing",
   "generating",
@@ -24,52 +24,16 @@ export const budgetBookStatusEnum = pgEnum("budget_book_status", [
   "failed",
 ]);
 
-export const budgetBookSectionTypeEnum = pgEnum("budget_book_section_type", [
-  "cover",
-  "toc",
-  "executive_summary",
-  "community_profile",
-  "revenue_summary",
-  "expenditure_summary",
-  "personnel_summary",
-  "capital_summary",
-  "multi_year_outlook",
-  "appendix",
-]);
-
-export const budgetBookReviewerTypeEnum = pgEnum("budget_book_reviewer_type", [
-  "gfoa",
-  "ada",
-]);
-
-export const budgetBookJobTypeEnum = pgEnum("budget_book_job_type", [
-  "analyze_prior_pdf",
-  "generate_sections",
-  "render_charts",
-  "gfoa_review",
-  "ada_review",
-  "revise_sections",
-  "render_pdf",
-  "finalize",
-]);
-
-export const budgetBookJobStatusEnum = pgEnum("budget_book_job_status", [
+export const jobStatusEnum = pgEnum("job_status", [
   "pending",
   "running",
   "completed",
   "failed",
 ]);
 
-export const budgetBookDataSourceEnum = pgEnum("budget_book_data_source", [
+export const dataSourceEnum = pgEnum("data_source", [
   "module",
   "upload",
-]);
-
-export const agentTypeEnum = pgEnum("agent_type", [
-  "bb_creator",
-  "bb_reviewer",
-  "ada_reviewer",
-  "bb_advisor",
 ]);
 
 export const skillScopeEnum = pgEnum("skill_scope", ["global", "customer"]);
@@ -104,22 +68,23 @@ export const todoMessageRoleEnum = pgEnum("todo_message_role", [
   "user",
 ]);
 
-// ---- Budget Books ----
+// ---- Documents ----
 
-export const budgetBooks = pgTable(
-  "budget_books",
+export const documents = pgTable(
+  "documents",
   {
     id: uuid("id").defaultRandom().primaryKey(),
     tenantId: text("tenant_id").notNull(),
+    docType: text("doc_type").notNull(),
     worksheetId: text("worksheet_id"),
     versionId: text("version_id"),
-    dataSource: budgetBookDataSourceEnum("data_source")
+    dataSource: dataSourceEnum("data_source")
       .notNull()
       .default("module"),
-    uploadedBudgetS3Key: text("uploaded_budget_s3_key"),
+    uploadedDataS3Key: text("uploaded_data_s3_key"),
     title: text("title").notNull(),
     fiscalYear: integer("fiscal_year").notNull(),
-    status: budgetBookStatusEnum("status").notNull().default("draft"),
+    status: documentStatusEnum("status").notNull().default("draft"),
     priorYearPdfS3Key: text("prior_year_pdf_s3_key"),
     styleAnalysis: jsonb("style_analysis").$type<Record<string, unknown>>(),
     generatedPdfS3Key: text("generated_pdf_s3_key"),
@@ -131,22 +96,22 @@ export const budgetBooks = pgTable(
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
   (table) => [
-    index("budget_book_tenant_idx").on(table.tenantId),
-    index("budget_book_worksheet_idx").on(table.tenantId, table.worksheetId),
+    index("document_tenant_idx").on(table.tenantId),
+    index("document_tenant_type_idx").on(table.tenantId, table.docType),
   ]
 );
 
-// ---- Budget Book Sections ----
+// ---- Document Sections ----
 
-export const budgetBookSections = pgTable(
-  "budget_book_sections",
+export const documentSections = pgTable(
+  "document_sections",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    budgetBookId: uuid("budget_book_id")
+    documentId: uuid("document_id")
       .notNull()
-      .references(() => budgetBooks.id, { onDelete: "cascade" }),
+      .references(() => documents.id, { onDelete: "cascade" }),
     tenantId: text("tenant_id").notNull(),
-    sectionType: budgetBookSectionTypeEnum("section_type").notNull(),
+    sectionType: text("section_type").notNull(),
     sectionOrder: integer("section_order").notNull(),
     title: text("title").notNull(),
     narrativeContent: text("narrative_content"),
@@ -157,21 +122,21 @@ export const budgetBookSections = pgTable(
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
   (table) => [
-    index("budget_book_section_book_idx").on(table.budgetBookId),
+    index("document_section_doc_idx").on(table.documentId),
   ]
 );
 
-// ---- Budget Book Reviews ----
+// ---- Document Reviews ----
 
-export const budgetBookReviews = pgTable(
-  "budget_book_reviews",
+export const documentReviews = pgTable(
+  "document_reviews",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    budgetBookId: uuid("budget_book_id")
+    documentId: uuid("document_id")
       .notNull()
-      .references(() => budgetBooks.id, { onDelete: "cascade" }),
+      .references(() => documents.id, { onDelete: "cascade" }),
     tenantId: text("tenant_id").notNull(),
-    reviewerType: budgetBookReviewerTypeEnum("reviewer_type").notNull(),
+    reviewerType: text("reviewer_type").notNull(),
     iteration: integer("iteration").notNull(),
     overallScore: numeric("overall_score", { precision: 6, scale: 2 }),
     passed: boolean("passed").notNull().default(false),
@@ -182,26 +147,26 @@ export const budgetBookReviews = pgTable(
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => [
-    index("budget_book_review_book_idx").on(table.budgetBookId),
-    index("budget_book_review_type_idx").on(
-      table.budgetBookId,
+    index("document_review_doc_idx").on(table.documentId),
+    index("document_review_type_idx").on(
+      table.documentId,
       table.reviewerType
     ),
   ]
 );
 
-// ---- Budget Book Jobs (progress tracking) ----
+// ---- Document Jobs (progress tracking) ----
 
-export const budgetBookJobs = pgTable(
-  "budget_book_jobs",
+export const documentJobs = pgTable(
+  "document_jobs",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    budgetBookId: uuid("budget_book_id")
+    documentId: uuid("document_id")
       .notNull()
-      .references(() => budgetBooks.id, { onDelete: "cascade" }),
+      .references(() => documents.id, { onDelete: "cascade" }),
     tenantId: text("tenant_id").notNull(),
-    jobType: budgetBookJobTypeEnum("job_type").notNull(),
-    status: budgetBookJobStatusEnum("status").notNull().default("pending"),
+    jobType: text("job_type").notNull(),
+    status: jobStatusEnum("status").notNull().default("pending"),
     progress: integer("progress").notNull().default(0),
     message: text("message"),
     error: text("error"),
@@ -209,7 +174,7 @@ export const budgetBookJobs = pgTable(
     completedAt: timestamp("completed_at"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
-  (table) => [index("budget_book_job_book_idx").on(table.budgetBookId)]
+  (table) => [index("document_job_doc_idx").on(table.documentId)]
 );
 
 // ---- Agent Skills (self-improving skill system) ----
@@ -218,7 +183,7 @@ export const agentSkills = pgTable(
   "agent_skills",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    agentType: agentTypeEnum("agent_type").notNull(),
+    agentType: text("agent_type").notNull(),
     tenantId: text("tenant_id"),
     scope: skillScopeEnum("scope").notNull().default("customer"),
     skill: text("skill").notNull(),
@@ -247,20 +212,20 @@ export const agentSkills = pgTable(
   ]
 );
 
-// ---- Budget Book Todos ----
+// ---- Document Todos ----
 
-export const budgetBookTodos = pgTable(
-  "budget_book_todos",
+export const documentTodos = pgTable(
+  "document_todos",
   {
     id: uuid("id").defaultRandom().primaryKey(),
-    budgetBookId: uuid("budget_book_id")
+    documentId: uuid("document_id")
       .notNull()
-      .references(() => budgetBooks.id, { onDelete: "cascade" }),
+      .references(() => documents.id, { onDelete: "cascade" }),
     tenantId: text("tenant_id").notNull(),
     category: todoCategoryEnum("category").notNull(),
     title: text("title").notNull(),
     description: text("description").notNull(),
-    sectionType: budgetBookSectionTypeEnum("section_type"),
+    sectionType: text("section_type"),
     status: todoStatusEnum("status").notNull().default("open"),
     priority: todoPriorityEnum("priority").notNull().default("medium"),
     sourceReviewId: uuid("source_review_id"),
@@ -268,24 +233,24 @@ export const budgetBookTodos = pgTable(
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
   (table) => [
-    index("budget_book_todo_book_idx").on(table.budgetBookId),
-    index("budget_book_todo_status_idx").on(table.budgetBookId, table.status),
+    index("document_todo_doc_idx").on(table.documentId),
+    index("document_todo_status_idx").on(table.documentId, table.status),
   ]
 );
 
-// ---- Budget Book Todo Messages ----
+// ---- Document Todo Messages ----
 
-export const budgetBookTodoMessages = pgTable(
-  "budget_book_todo_messages",
+export const documentTodoMessages = pgTable(
+  "document_todo_messages",
   {
     id: uuid("id").defaultRandom().primaryKey(),
     todoId: uuid("todo_id")
       .notNull()
-      .references(() => budgetBookTodos.id, { onDelete: "cascade" }),
+      .references(() => documentTodos.id, { onDelete: "cascade" }),
     role: todoMessageRoleEnum("role").notNull(),
     content: text("content").notNull(),
     attachmentS3Keys: jsonb("attachment_s3_keys").$type<string[]>(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
   },
-  (table) => [index("budget_book_todo_msg_todo_idx").on(table.todoId)]
+  (table) => [index("document_todo_msg_todo_idx").on(table.todoId)]
 );
