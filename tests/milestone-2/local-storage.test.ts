@@ -3,7 +3,7 @@ import { LocalStorageProvider } from "../../src/providers/local-storage.js";
 import { rm, stat } from "node:fs/promises";
 import { join } from "node:path";
 
-const TEST_DIR = "/tmp/budget-book-engine-test-" + Date.now();
+const TEST_DIR = "/tmp/document-engine-test-" + Date.now();
 
 describe("LocalStorageProvider", () => {
   let storage: LocalStorageProvider;

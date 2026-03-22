@@ -1,4 +1,4 @@
-# Budget Book Engine — Technical Installation & Usage Guide
+# Document Engine — Technical Installation & Usage Guide
 
 ## Prerequisites
 
@@ -14,8 +14,8 @@
 ## 1. Installation
 
 ```bash
-git clone <repo-url> budget-book-engine
-cd budget-book-engine
+git clone <repo-url> document-engine
+cd document-engine
 corepack enable
 pnpm install
 ```
@@ -30,7 +30,7 @@ cp .env.example .env
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `DATABASE_URL` | Yes | PostgreSQL connection string (`postgresql://user:pass@localhost:5432/budgetbook`) |
+| `DATABASE_URL` | Yes | PostgreSQL connection string (`postgresql://user:pass@localhost:5432/docengine`) |
 | `ANTHROPIC_API_KEY` | Yes | Anthropic API key (`sk-ant-...`) |
 | `REDIS_URL` | Yes | Redis connection string (`redis://localhost:6379`) |
 | `AWS_ACCESS_KEY_ID` | No | AWS credentials for S3 (not needed if using `LocalStorageProvider`) |
@@ -48,7 +48,7 @@ The engine owns its schema via Drizzle ORM. Push the schema to your database:
 
 ```bash
 # Create the database first
-createdb budgetbook
+createdb docengine
 
 # Push the Drizzle schema to the database
 pnpm db:push
@@ -67,13 +67,13 @@ The engine manages 7 tables:
 
 | Table | Purpose |
 |-------|---------|
-| `budget_books` | Top-level book records (title, fiscal year, status, config) |
-| `budget_book_sections` | Generated section content (narrative, tables, charts) |
-| `budget_book_reviews` | GFOA and ADA review results per iteration |
-| `budget_book_jobs` | Job progress tracking for each generation step |
+| `documents` | Top-level document records (title, fiscal year, status, docType, config) |
+| `document_sections` | Generated section content (narrative, tables, charts) |
+| `document_reviews` | Review results per reviewer per iteration |
+| `document_jobs` | Job progress tracking for each pipeline step |
 | `agent_skills` | Self-improving skill system (seeds + learned skills) |
-| `budget_book_todos` | Action items from data gaps and review findings |
-| `budget_book_todo_messages` | Chat history between users and the AI advisor |
+| `document_todos` | Action items from data gaps and review findings |
+| `document_todo_messages` | Chat history between users and the AI advisor |
 
 All tables use `tenant_id` for multi-tenant isolation. No external foreign keys — the engine is fully self-contained.
 
@@ -84,7 +84,7 @@ All tables use `tenant_id` for multi-tenant isolation. No external foreign keys 
 ```bash
 pnpm build          # Compile TypeScript → dist/
 pnpm typecheck      # Type-check without emitting (must be zero errors)
-pnpm test           # Run all 150 tests across 27 test files
+pnpm test           # Run all tests
 pnpm check          # Typecheck + test in one command
 ```
 
@@ -118,11 +118,11 @@ Start the infrastructure:
 
 ```bash
 # If you don't have Postgres/Redis running locally, use Docker for just those:
-docker run -d --name bbengine-pg -p 5432:5432 \
-  -e POSTGRES_USER=budgetbook -e POSTGRES_PASSWORD=budgetbook -e POSTGRES_DB=budgetbook \
+docker run -d --name docengine-pg -p 5432:5432 \
+  -e POSTGRES_USER=docengine -e POSTGRES_PASSWORD=docengine -e POSTGRES_DB=docengine \
   postgres:16-alpine
 
-docker run -d --name bbengine-redis -p 6379:6379 redis:7-alpine
+docker run -d --name docengine-redis -p 6379:6379 redis:7-alpine
 ```
 
 Push the schema and start the services:
@@ -142,13 +142,13 @@ pnpm worker
 
 ```typescript
 import {
-  createBudgetBookEngine,
+  createDocumentEngine,
   AnthropicAiProvider,
   S3StorageProvider,
   BullMQQueueProvider,
-} from "@docgen/budget-book-engine";
+} from "@docgen/document-engine";
 
-const engine = createBudgetBookEngine({
+const engine = createDocumentEngine({
   connectionString: process.env.DATABASE_URL!,
   ai: new AnthropicAiProvider(process.env.ANTHROPIC_API_KEY!),
   storage: new S3StorageProvider({
@@ -169,7 +169,7 @@ const app = await engine.startServer(4000);
 engine.startWorker();
 
 // Or generate directly (bypasses the queue)
-await engine.generate(budgetBookId, tenantId);
+await engine.generate(documentId, tenantId);
 
 // Graceful shutdown
 await engine.shutdown();
@@ -178,9 +178,9 @@ await engine.shutdown();
 For local development without AWS, use `LocalStorageProvider`:
 
 ```typescript
-import { LocalStorageProvider } from "@docgen/budget-book-engine";
+import { LocalStorageProvider } from "@docgen/document-engine";
 
-const storage = new LocalStorageProvider("/tmp/budget-book-storage");
+const storage = new LocalStorageProvider("/tmp/document-engine-storage");
 ```
 
 ---
@@ -214,15 +214,16 @@ Returns `{ status: "ok", timestamp: "...", version: "..." }`. No auth required.
 
 ---
 
-### Books
+### Documents
 
-#### Create a Book
+#### Create a Document
 
 ```
-POST /api/books
+POST /api/documents
 Content-Type: application/json
 
 {
+  "docType": "budget_book",
   "title": "FY2026 Budget Book",
   "fiscalYear": 2026,
   "dataSource": "upload",        // "module" (query DataProvider) or "upload" (Excel file)
@@ -231,78 +232,80 @@ Content-Type: application/json
 }
 ```
 
-Returns `201` with the created book record.
+The `docType` field is required and must match a registered document type (e.g., `budget_book`, `pafr`).
 
-#### List Books
+Returns `201` with the created document record.
 
-```
-GET /api/books
-```
-
-Returns all books for the authenticated tenant, ordered by creation date.
-
-#### Get a Book
+#### List Documents
 
 ```
-GET /api/books/:id
+GET /api/documents
 ```
 
-Returns the full book record or `404`.
+Returns all documents for the authenticated tenant, ordered by creation date.
 
-#### Delete a Book
+#### Get a Document
 
 ```
-DELETE /api/books/:id
+GET /api/documents/:id
+```
+
+Returns the full document record or `404`.
+
+#### Delete a Document
+
+```
+DELETE /api/documents/:id
 ```
 
 Returns `204` on success. Cascades to sections, reviews, jobs, and todos.
 
-#### Upload Budget Excel File
+#### Upload Data File
 
 ```
-POST /api/books/:id/budget-file
+POST /api/documents/:id/data-file
 Content-Type: multipart/form-data
 
-(attach Excel file as form field)
+(attach Excel/CSV file as form field)
 ```
 
 Uploads the file to storage and sets `dataSource` to `"upload"`. Max file size: 50 MB.
 
-#### Upload Prior-Year PDF
+#### Upload Prior-Year Document
 
 ```
-POST /api/books/:id/prior-year-pdf
+POST /api/documents/:id/prior-document
 Content-Type: multipart/form-data
 
 (attach PDF file as form field)
 ```
 
-The engine analyzes this PDF to extract style guidance (tone, chart types, layout) for the new book.
+The engine analyzes this PDF to extract style guidance (tone, chart types, layout) for the new document.
 
 #### Start Generation
 
 ```
-POST /api/books/:id/generate
+POST /api/documents/:id/generate
 ```
 
 Enqueues the generation job. Returns `202 Accepted`. Only works from `"draft"` or `"failed"` status.
 
 The worker picks up the job and runs the full orchestration pipeline:
-1. Analyze prior-year PDF for style
-2. Fetch/parse budget data
-3. Detect data gaps and create todos
-4. Generate all sections using BB_Creator agent
-5. Render charts (Puppeteer + Recharts)
-6. GFOA + ADA review in parallel
-7. Extract learned skills from reviews
-8. Revise sections based on feedback (with plateau detection)
-9. Render final PDF
-10. Set final status
+1. Seed global skills (idempotent)
+2. Analyze prior-year document for style
+3. Fetch/parse document data
+4. Detect data gaps and create todos
+5. Generate all sections using the creator agent
+6. Render charts (Puppeteer + Recharts)
+7. Run all reviewers in parallel
+8. Extract learned skills from reviews
+9. Revise sections based on feedback (with plateau detection)
+10. Render final PDF and set status
 
 #### Regenerate
 
 ```
-POST /api/books/:id/regenerate
+POST /api/documents/:id/regenerate
 ```
 
 Re-runs generation after a user addresses todos. Works from `"completed"`, `"completed_with_todos"`, or `"failed"` status. Returns `202`.
@@ -310,36 +313,34 @@ Re-runs generation after a user addresses todos. Works from `"completed"`, `"com
 #### Get Progress
 
 ```
-GET /api/books/:id/progress
+GET /api/documents/:id/progress
 ```
 
 Returns job-level progress for real-time UI updates:
 
 ```json
 {
-  "budgetBookId": "...",
+  "documentId": "...",
   "jobs": [
-    { "jobType": "analyze_prior_pdf", "status": "completed", "progress": 100, "message": "Style analysis complete" },
-    { "jobType": "generate_sections", "status": "running", "progress": 60, "message": "Generating personnel summary..." },
-    { "jobType": "gfoa_review", "status": "pending", "progress": 0 }
+    { "jobType": "analyze_prior_document", "status": "completed", "progress": 100, "message": "Style analysis complete" },
+    { "jobType": "generate_sections", "status": "running", "progress": 60, "message": "Generating revenue summary..." },
+    { "jobType": "review", "status": "pending", "progress": 0 }
   ]
 }
 ```
 
-Job types in order: `analyze_prior_pdf`, `generate_sections`, `render_charts`, `gfoa_review`, `ada_review`, `revise_sections`, `render_pdf`, `finalize`.
-
 #### Get Preview
 
 ```
-GET /api/books/:id/preview
+GET /api/documents/:id/preview
 ```
 
-Returns the book metadata and all section content for web rendering.
+Returns the document metadata and all section content for web rendering.
 
 #### Download PDF
 
 ```
-GET /api/books/:id/pdf
+GET /api/documents/:id/pdf
 ```
 
 Redirects to a signed download URL for the generated PDF. Returns `404` if not yet generated.
@@ -347,27 +348,27 @@ Redirects to a signed download URL for the generated PDF. Returns `404` if not y
 #### Get Reviews
 
 ```
-GET /api/books/:id/reviews
+GET /api/documents/:id/reviews
 ```
 
-Returns all GFOA and ADA review results across iterations, ordered chronologically.
+Returns all review results across iterations, ordered chronologically.
 
 ---
 
 ### Todos
 
-Todos are created automatically during generation (from data gaps and GFOA review findings). Users can chat with the BB_Advisor agent to resolve them.
+Todos are created automatically during generation (from data gaps and review findings). Users can chat with the advisor agent to resolve them.
 
-#### List Todos for a Book
+#### List Todos for a Document
 
 ```
-GET /api/books/:bookId/todos
+GET /api/documents/:documentId/todos
 ```
 
 #### Get Todo with Messages
 
 ```
-GET /api/todos/:id
+GET /api/documents/todos/:id
 ```
 
 Returns the todo record and its full chat message history.
@@ -375,18 +376,18 @@ Returns the todo record and its full chat message history.
 #### Send a Message (Chat with Advisor)
 
 ```
-POST /api/todos/:id/messages
+POST /api/documents/todos/:id/messages
 Content-Type: application/json
 
 { "message": "Can you explain what revenue data is missing?" }
 ```
 
-The BB_Advisor agent responds in context of the todo, the book, and prior chat history. Returns the agent's response.
+The advisor agent responds in context of the todo, the document, and prior chat history. Returns the agent's response.
 
 #### Upload Attachment
 
 ```
-POST /api/todos/:id/files
+POST /api/documents/todos/:id/files
 Content-Type: multipart/form-data
 
 (attach file)
@@ -397,7 +398,7 @@ Returns `{ s3Key: "..." }`.
 #### Update Todo Status
 
 ```
-PATCH /api/todos/:id/status
+PATCH /api/documents/todos/:id/status
 Content-Type: application/json
 
 { "status": "resolved" }
@@ -409,59 +410,32 @@ Valid statuses: `open`, `in_progress`, `resolved`, `skipped`.
 
 ## 7. Implementing a Custom DataProvider
 
-If you're integrating the engine into an existing application, implement the `DataProvider` interface to supply budget data from your system:
+If you're integrating the engine into an existing application, implement the `DataProvider` interface to supply document data from your system:
 
 ```typescript
-import type { DataProvider, BudgetBookData } from "@docgen/budget-book-engine";
+import type { DataProvider } from "@docgen/document-engine";
 
 class MyDataProvider implements DataProvider {
-  async getBudgetData(
+  async getDocumentData(
+    docTypeId: string,
     tenantId: string,
     worksheetId: string,
     fiscalYear: number
-  ): Promise<BudgetBookData> {
+  ): Promise<unknown> {
     // Query your database, API, or data warehouse
-    return {
-      fiscalYear,
-      communityProfile: {
-        name: "Town of Springfield",
-        state: "MA",
-        population: 155000,
-        squareMiles: 33.2,
-        formOfGovernment: "Council-Manager",
-        established: "1636",
-      },
-      revenueDetail: [
-        {
-          fundCode: "100",
-          fundName: "General Fund",
-          accountCode: "4100",
-          accountName: "Property Tax",
-          priorActual: 45000000,
-          currentBudget: 47000000,
-          proposedBudget: 49000000,
-        },
-        // ... more rows
-      ],
-      expenditureByDepartment: [ /* ... */ ],
-      personnelDetail: [ /* ... */ ],
-      capitalProjects: [ /* ... */ ],
-      multiYearProjections: [ /* ... */ ],
-      totalRevenue: 85000000,
-      totalExpenditure: 82000000,
-      totalPersonnelCost: 42000000,
-      totalCapitalCost: 15000000,
-      executiveSummary: "Optional pre-written summary text...",
-    };
+    // Return data matching the doc type's dataSchema
+    return { fiscalYear, ... };
   }
 }
 ```
+
+The returned data is validated at runtime against the document type's `dataSchema` (Zod). Each document type defines its own expected data shape — see `src/doc-types/budget-book/data-types.ts` for the budget book example.
 
 Alternatively, use `dataSource: "upload"` to let users upload an Excel file, which the engine parses with Claude.
 
 ---
 
-## 8. Book Lifecycle
+## 8. Document Lifecycle
 
 ```
 draft → analyzing → generating → reviewing → revision → reviewing → ... → completed
@@ -472,17 +446,18 @@ draft → analyzing → generating → reviewing → revision → reviewing → 
 | Status | Meaning |
 |--------|---------|
 | `draft` | Created, awaiting file uploads and generation trigger |
-| `analyzing` | Parsing prior-year PDF for style guidance |
+| `analyzing` | Parsing prior-year document for style guidance |
 | `generating` | AI agents are writing section content |
-| `reviewing` | GFOA and ADA reviewers are evaluating the book |
-| `revision` | BB_Creator is revising sections based on review feedback |
+| `reviewing` | Reviewers are evaluating the document |
+| `revision` | Creator is revising sections based on review feedback |
 | `completed` | All reviews passed, PDF generated, no open todos |
 | `completed_with_todos` | PDF generated but action items remain for the user |
 | `failed` | An error occurred; can be retried with `/generate` |
 
 The review-revise loop runs up to `maxIterations` times (default 3). It stops early if:
-- Both GFOA and ADA reviews pass
-- The GFOA score plateaus (no improvement between iterations)
+- All reviewers pass
+- Scores plateau (no improvement between iterations)
+- Custom `shouldContinueIterating` logic on the doc type returns false
 
 ---
 
@@ -490,10 +465,10 @@ The review-revise loop runs up to `maxIterations` times (default 3). It stops ea
 
 The engine learns from every generation cycle. After each review, it extracts "skills" — lessons learned — and injects them into future agent prompts.
 
-- **15 global seed skills** are created on first run (idempotent)
+- Global seed skills are created on first run (idempotent), defined per document type
 - Skills extracted from reviews are scoped to the tenant
 - Max **15 skills per prompt**, max **30 per agent+tenant combination**
-- Priority hierarchy: ADA compliance > GFOA standards > formatting
+- Priority hierarchy is configurable per document type
 - Tenant-scoped skills override global seeds when they conflict
 - Low-confidence skills are pruned automatically
 
@@ -524,7 +499,7 @@ pnpm check    # tsc --noEmit && vitest run
 | Symptom | Fix |
 |---------|-----|
 | `ECONNREFUSED` on startup | Ensure Postgres and Redis are running and `DATABASE_URL`/`REDIS_URL` are correct |
-| `relation "budget_books" does not exist` | Run `pnpm db:push` to create the schema |
+| `relation "documents" does not exist` | Run `pnpm db:push` to create the schema |
 | Chart rendering fails | Puppeteer needs Chromium. In Docker this is handled automatically. Locally, run `npx puppeteer browsers install chrome` |
 | `401 Unauthorized` on API calls | Include `x-tenant-id` header in all `/api/*` requests |
 | Generation stuck in `"generating"` | Check the worker process is running (`pnpm worker`). Check Redis connectivity. |
