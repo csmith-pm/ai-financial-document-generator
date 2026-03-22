@@ -23,7 +23,7 @@ services:
 
   worker:
     build: .
-    command: ["node", "dist/worker/index.js"]
+    command: ["node", "dist/bin/worker.js"]
     environment:
       DATABASE_URL: postgresql://budgetbook:budgetbook@postgres:5432/budgetbook
       REDIS_URL: redis://redis:6379
