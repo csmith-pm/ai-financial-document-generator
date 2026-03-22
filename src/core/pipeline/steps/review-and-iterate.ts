@@ -31,6 +31,7 @@ import {
   extractSkillsFromAdaReview,
 } from "../../skills/extractor.js";
 import { createTodosFromGfoaReview } from "../../todos/creator.js";
+import type { GfoaReviewResult, AdaReviewResult } from "../../../doc-types/budget-book/review-types.js";
 import { renderAndUploadCharts } from "./render-charts.js";
 
 // ─── Types ───────────────────────────────────────────────────────────────
@@ -143,7 +144,7 @@ export async function extractSkillsFromResults(
           pCtx.ctx.db,
           pCtx.ctx.ai,
           pCtx.ctx.tenantId,
-          row.result,
+          row.result as GfoaReviewResult,
           row.id
         );
       } else if (row.reviewerSpec.id === "ada") {
@@ -151,7 +152,7 @@ export async function extractSkillsFromResults(
           pCtx.ctx.db,
           pCtx.ctx.ai,
           pCtx.ctx.tenantId,
-          row.result,
+          row.result as AdaReviewResult,
           row.id
         );
       }
@@ -178,7 +179,7 @@ export async function createFirstIterationTodos(
           pCtx.ctx.db,
           pCtx.documentId,
           pCtx.ctx.tenantId,
-          row.result,
+          row.result as GfoaReviewResult,
           row.id
         );
       }

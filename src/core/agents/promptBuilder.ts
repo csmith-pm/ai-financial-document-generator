@@ -9,7 +9,7 @@
 import { eq, and, or, isNull, desc } from "drizzle-orm";
 import { agentSkills } from "../../db/schema.js";
 import { type DrizzleInstance } from "../../db/connection.js";
-import { getAgentDefinition, type AgentType } from "./definitions.js";
+import { getAgentDefinition } from "./definitions.js";
 
 interface LoadedSkill {
   id: string;
@@ -27,10 +27,10 @@ const MAX_SKILLS_PER_PROMPT = 15;
  */
 export async function buildAgentPrompt(
   db: DrizzleInstance,
-  agentType: AgentType,
+  agentType: string,
   tenantId: string
 ): Promise<string> {
-  const definition = getAgentDefinition(agentType);
+  const definition = getAgentDefinition(agentType as import("./definitions.js").AgentType);
 
   // Load active skills for this agent: global + tenant-specific
   const rows: LoadedSkill[] = await db
