@@ -15,11 +15,16 @@ import {
   resumeBudgetBookGeneration,
 } from "./core/orchestrator.js";
 
+// Register document types (side-effect import)
+import "./doc-types/index.js";
+
 // Re-export core types for consumers
 export type { AiProvider, StorageProvider, DataProvider, QueueProvider, EngineConfig } from "./core/providers.js";
 export type { EngineContext } from "./core/context.js";
 export type { BudgetBookData } from "./core/providers.js";
 export type { StyleAnalysis } from "./core/types.js";
+export type { DocumentTypeDefinition } from "./core/doc-type.js";
+export { defaultRegistry } from "./doc-types/index.js";
 
 // Re-export provider implementations
 export { AnthropicAiProvider } from "./providers/anthropic.js";
