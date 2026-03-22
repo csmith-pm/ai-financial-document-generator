@@ -72,6 +72,7 @@ export async function updateJobStatus(
 
 export function createInitialState(overrides?: Partial<PipelineState>): PipelineState {
   return {
+    document: null,
     styleAnalysis: null,
     documentData: null,
     sections: [],

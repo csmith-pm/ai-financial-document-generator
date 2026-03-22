@@ -17,6 +17,8 @@ import type { StyleAnalysis } from "../types.js";
  * Each step documents which fields it reads and writes.
  */
 export interface PipelineState {
+  /** The loaded document record from the database (set by executor before steps run) */
+  document: Record<string, unknown> | null;
   /** Style analysis from prior document (set by analyze-style step) */
   styleAnalysis: StyleAnalysis | null;
   /** Parsed document data matching the doc type's schema (set by fetch-data step) */
