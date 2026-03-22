@@ -6,10 +6,9 @@
  * that the engine can look up at runtime via the document type registry.
  */
 
-import type { DocumentTypeDefinition } from "../../core/doc-type.js";
+import type { DocumentTypeDefinition, SectionOutput } from "../../core/doc-type.js";
 import type { AiProvider, StorageProvider } from "../../core/providers.js";
 import type { StyleAnalysis } from "../../core/types.js";
-import type { SectionOutput } from "../../core/doc-type.js";
 
 import type { BudgetBookData } from "./data-types.js";
 import { budgetBookDataSchema } from "./data-types.js";
@@ -87,6 +86,61 @@ export const budgetBookDocType: DocumentTypeDefinition<BudgetBookData> = {
 
   // ── Advisors ──────────────────────────────────────────────────────────
   advisorAgentType: "bb_advisor",
+
+  // ── Iteration Control ───────────────────────────────────────────────
+  storagePrefix: "budget-books",
+
+  buildRevisionPrompt(
+    section: SectionOutput,
+    feedbackByReviewer: Map<string, string[]>,
+    data: unknown,
+    style: StyleAnalysis | null
+  ) {
+    const gfoaFeedback = feedbackByReviewer.get("gfoa") ?? [];
+    const adaFeedback = feedbackByReviewer.get("ada") ?? [];
+
+    const systemPromptSuffix =
+      "\n\nYou are revising an existing section based on reviewer feedback. " +
+      "Make targeted improvements to address the specific issues raised. " +
+      "Maintain the same overall structure and data. " +
+      "Respond with valid JSON in the same format as the original section.";
+
+    const sectionData = getSectionData(section.sectionType, data as BudgetBookData);
+    const userPrompt =
+      `Original section:\n${JSON.stringify(section, null, 2)}\n\n` +
+      `GFOA feedback for this section:\n${gfoaFeedback.join("\n")}\n\n` +
+      `ADA feedback for this section:\n${adaFeedback.join("\n")}\n\n` +
+      `Budget data context:\n${JSON.stringify(sectionData, null, 2)}`;
+
+    return { systemPromptSuffix, userPrompt };
+  },
+
+  shouldContinueIterating(
+    results: Map<string, { passed: boolean; score: number | null }>,
+    iteration: number,
+    previousScores: Map<string, number | null>
+  ): boolean {
+    // Stop if all reviewers pass
+    const allPassed = [...results.values()].every((r) => r.passed);
+    if (allPassed) return false;
+
+    // Plateau detection: stop if GFOA score didn't improve after 2+ iterations
+    const gfoaResult = results.get("gfoa");
+    const previousGfoaScore = previousScores.get("gfoa");
+    if (
+      iteration >= 2 &&
+      gfoaResult?.score != null &&
+      previousGfoaScore != null &&
+      gfoaResult.score <= previousGfoaScore
+    ) {
+      console.log(
+        `[budget-book] Score plateau detected (${previousGfoaScore} → ${gfoaResult.score}). Stopping iterations.`
+      );
+      return false;
+    }
+
+    return true;
+  },
 
   // ── Rendering ─────────────────────────────────────────────────────────
   async renderPdf(

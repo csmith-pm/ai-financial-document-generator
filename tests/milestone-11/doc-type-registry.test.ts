@@ -28,6 +28,7 @@ function makeStubDocType(
     categoryPriority: {},
     detectDataGaps: () => [],
     advisorAgentType: "test_advisor",
+    storagePrefix: "test-docs",
     ...overrides,
   };
 }

@@ -55,6 +55,7 @@ function makeStubDocType(): DocumentTypeDefinition {
     categoryPriority: {},
     detectDataGaps: () => [],
     advisorAgentType: "test_advisor",
+    storagePrefix: "test-docs",
   };
 }
 
