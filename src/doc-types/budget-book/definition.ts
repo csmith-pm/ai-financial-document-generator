@@ -6,9 +6,10 @@
  * that the engine can look up at runtime via the document type registry.
  */
 
-import type { DocumentTypeDefinition, SectionOutput } from "../../core/doc-type.js";
+import type { DocumentTypeDefinition, SectionOutput, ReviewerSpec } from "../../core/doc-type.js";
 import type { AiProvider, StorageProvider } from "../../core/providers.js";
 import type { StyleAnalysis } from "../../core/types.js";
+import type { DrizzleInstance } from "../../db/connection.js";
 
 import type { BudgetBookData } from "./data-types.js";
 import { budgetBookDataSchema } from "./data-types.js";
@@ -26,6 +27,12 @@ import { detectDataGaps } from "./detector.js";
 import { renderBudgetBookPdf } from "./pdf/renderer.js";
 import { analyzePriorYearPdf } from "./pdf/analyzer.js";
 import { parseExcelBudget } from "./excel-parser.js";
+import {
+  extractSkillsFromGfoaReview,
+  extractSkillsFromAdaReview,
+} from "../../core/skills/extractor.js";
+import { createTodosFromGfoaReview } from "./todo-factory.js";
+import type { GfoaReviewResult, AdaReviewResult } from "./review-types.js";
 
 export const budgetBookDocType: DocumentTypeDefinition<BudgetBookData> = {
   id: "budget_book",
@@ -84,11 +91,42 @@ export const budgetBookDocType: DocumentTypeDefinition<BudgetBookData> = {
     return detectDataGaps(data);
   },
 
-  // ── Advisors ──────────────────────────────────────────────────────────
+  // ── Agent Types ────────────────────────────────────────────────────────
+  creatorAgentType: "bb_creator",
   advisorAgentType: "bb_advisor",
 
   // ── Iteration Control ───────────────────────────────────────────────
   storagePrefix: "budget-books",
+
+  // ── Skill Extraction ──────────────────────────────────────────────
+  async extractSkillsFromReview(
+    db: DrizzleInstance,
+    ai: AiProvider,
+    tenantId: string,
+    reviewerSpec: ReviewerSpec,
+    result: unknown,
+    reviewId: string
+  ): Promise<void> {
+    if (reviewerSpec.id === "gfoa") {
+      await extractSkillsFromGfoaReview(db, ai, tenantId, result as GfoaReviewResult, reviewId);
+    } else if (reviewerSpec.id === "ada") {
+      await extractSkillsFromAdaReview(db, ai, tenantId, result as AdaReviewResult, reviewId);
+    }
+  },
+
+  // ── Todo Creation from Reviews ────────────────────────────────────
+  async createTodosFromReview(
+    db: DrizzleInstance,
+    documentId: string,
+    tenantId: string,
+    reviewerSpec: ReviewerSpec,
+    result: unknown,
+    reviewId: string
+  ): Promise<void> {
+    if (reviewerSpec.id === "gfoa") {
+      await createTodosFromGfoaReview(db, documentId, tenantId, result as GfoaReviewResult, reviewId);
+    }
+  },
 
   buildRevisionPrompt(
     section: SectionOutput,

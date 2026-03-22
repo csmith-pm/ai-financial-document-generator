@@ -15,16 +15,16 @@ Restructuring the budget-book-engine from a single-purpose budget book generator
 | 2 | DocumentTypeDefinition + Extraction | ✅ Done | `feature/phase-2-doc-type-interface` | #3 merged | `DocumentTypeDefinition` interface, `DocumentTypeRegistry`, extracted budget-book into `src/doc-types/budget-book/` |
 | 3 | Generic Orchestrator + Pipeline | ✅ Done | `feature/phase-3-generic-pipeline` | #4 merged | 873-line orchestrator → 9 pipeline steps, enriched `ReviewerSpec`, generic `orchestrateDocumentGeneration()` |
 | 4 | Generic API + Entry Points | ✅ Done | `feature/phase-4-generic-api` | — | Generic `/api/documents` routes, `createDocumentEngine()` factory, generic worker jobs |
-| 5 | Training Workbench | 🔲 Todo | `feature/phase-5-workbench` | — | Dev routes + CLI for agent training and iteration |
-| 6 | Second Document Type | 🔲 Todo | `feature/phase-6-pafr` | — | Add PAFR (or similar) to validate abstraction end-to-end |
+| 5 | Training Workbench | ✅ Done | `feature/phase-5-workbench` | #6 merged | Dev routes + CLI for agent training and iteration |
+| 6 | Second Document Type (PAFR) | ✅ Done | `feature/phase-6-pafr` | #7 | PAFR doc type, generic pipeline decoupling, shared ADA reviewer |
 
 ---
 
 ## Current State
 
-- **Tests:** 296 passing
+- **Tests:** 339 passing (296 existing + 43 new PAFR tests)
 - **Type errors:** Zero (`npx tsc --noEmit`)
-- **Next step:** Phase 5 — Training Workbench
+- **Next step:** Phase 7 (TBD)
 
 ---
 
@@ -87,39 +87,46 @@ Restructuring the budget-book-engine from a single-purpose budget book generator
 - Worker registers generic job names (`generate-document`, `regenerate-document`) + legacy names
 - 3 new test files in `tests/milestone-13/` (24 tests)
 
+### Phase 5: Training Workbench
+- Created `src/workbench/` with `createWorkbench()` factory (superset of production server)
+- Dev-only routes:
+  - `POST /workbench/run-section` — stateless single section generation
+  - `GET /workbench/iterations/:docId` — side-by-side iteration comparison
+  - `GET /workbench/skills/:docType/:tenantId` — skill audit trail
+  - `POST /workbench/upload-test-data` — parse + validate without generating
+  - `GET /workbench/doc-types` — list registered types with configs
+- CLI: `pnpm workbench:cli` with `doc-types`, `validate`, `sections` commands
+- `src/bin/workbench.ts` entry point (port 4100)
+- 3 new test files in `tests/milestone-14/` (18 tests)
+
+### Phase 6: Second Document Type (PAFR)
+- **Decoupled pipeline from budget-book specifics:**
+  - Added `creatorAgentType` to `DocumentTypeDefinition` interface
+  - Changed `buildAgentPrompt()` to accept base prompt directly (no more `getAgentDefinition()` shim)
+  - Added `extractSkillsFromReview()` and `createTodosFromReview()` hooks to interface
+  - Replaced hardcoded `"bb_creator"` in generate-sections and review-and-iterate steps
+  - Widened `pruneSkills()` agent type from budget-book union to `string`
+  - Updated advisor to look up doc type from document record dynamically
+- **Shared modules:** Extracted `src/doc-types/shared/ada-reviewer.ts` (generic ADA agent)
+- **Created `src/doc-types/pafr/` with 10 files:**
+  - `data-types.ts` — `PafrData` interface + Zod schemas (community profile, revenue, expenditure, key metrics, demographics, fund balance)
+  - `agents.ts` — 4 agents (PAFR_Creator, PAFR_Reviewer, ADA_Reviewer, PAFR_Advisor)
+  - `sections.ts` — 5 sections (letter from leadership, financial highlights, revenue, expenditure, demographics)
+  - `review-types.ts` — PAFR quality scoring (100 points: Reader Appeal 25, Understandability 25, Visual Design 20, Financial Content 20, Creativity 10)
+  - `reviewers.ts` — PAFR quality + ADA reviewer specs
+  - `seeds.ts` — 10 seed skills (7 creator, 3 reviewer)
+  - `category-priority.ts` — ADA 30 > plain language 25 > review criteria 20 > visual design 15 > advisory 5
+  - `detector.ts` — Data gap detection for PAFR fields
+  - `definition.ts` — Full `DocumentTypeDefinition<PafrData>` with skill extraction, todo creation, revision prompts, plateau detection
+  - `index.ts` — Public exports
+- Registered PAFR in `src/doc-types/index.ts`
+- 2 new test files in `tests/milestone-15/` (43 tests)
+
 ---
 
 ## Remaining Phases
 
-### Phase 5: Training Workbench
-**Branch:** `feature/phase-5-workbench`
-**Goal:** Dev-only routes + CLI for agent training and iteration inspection.
-
-**Key features:**
-- `POST /workbench/run-section` — generate a single section, inspect raw AI output
-- `GET /workbench/iterations/:docId` — compare iterations side-by-side
-- `GET /workbench/skills/:docType/:tenantId` — skill audit trail
-- `POST /workbench/upload-test-data` — parse + validate without generating
-- `GET /workbench/doc-types` — list registered types with configs
-- CLI: `pnpm workbench run budget_book --data ./test.xlsx`
-
-**Files to create:**
-| File | Purpose |
-|------|---------|
-| `src/workbench/index.ts` | `createWorkbench()` — superset of production server |
-| `src/workbench/routes/` | Dev-only route handlers |
-| `src/workbench/cli.ts` | CLI entry point |
-| `src/bin/workbench.ts` | Workbench binary |
-
-### Phase 6: Second Document Type
-**Branch:** `feature/phase-6-pafr`
-**Goal:** Add a minimal second document type to validate the abstraction works end-to-end.
-
-**What this proves:**
-- A new doc type can be added by only creating files in `src/doc-types/<type>/`
-- No changes needed in `src/core/` or pipeline steps
-- Generic API routes work for the new type
-- Skill system, review loop, and rendering are fully generic
+_(No phases currently planned — all 7 original phases complete.)_
 
 ---
 

@@ -24,11 +24,12 @@ export async function generateSection(
   data: unknown,
   styleAnalysis: StyleAnalysis | null
 ): Promise<SectionOutput> {
-  const creatorAgent = docType.getAgent("bb_creator");
+  const creatorAgent = docType.getAgent(docType.creatorAgentType);
   const systemPrompt = await buildAgentPrompt(
     ctx.db,
-    "bb_creator",
-    ctx.tenantId
+    docType.creatorAgentType,
+    ctx.tenantId,
+    creatorAgent.baseSystemPrompt
   );
   const userPrompt = docType.getSectionPrompt(sectionType, data, styleAnalysis);
 
@@ -39,7 +40,7 @@ export async function generateSection(
 
   await ctx.ai.logUsage?.(
     ctx.tenantId,
-    `bb_creator_${sectionType}`,
+    `${docType.creatorAgentType}_${sectionType}`,
     result.inputTokens,
     result.outputTokens,
     result.model

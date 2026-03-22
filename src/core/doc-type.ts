@@ -134,6 +134,9 @@ export interface DocumentTypeDefinition<TData = unknown> {
 
   // ── Advisors ──────────────────────────────────────────────────────────
 
+  /** Agent type used for content generation */
+  creatorAgentType: string;
+
   /** Agent type used for conversational todo chat */
   advisorAgentType: string;
 
@@ -164,6 +167,34 @@ export interface DocumentTypeDefinition<TData = unknown> {
     iteration: number,
     previousScores: Map<string, number | null>
   ): boolean;
+
+  // ── Skill Extraction ────────────────────────────────────────────────
+
+  /**
+   * Extract skills from a review result. Called after each review round.
+   * If not implemented, skill extraction is skipped for this doc type.
+   */
+  extractSkillsFromReview?(
+    db: import("../db/connection.js").DrizzleInstance,
+    ai: AiProvider,
+    tenantId: string,
+    reviewerSpec: ReviewerSpec,
+    result: unknown,
+    reviewId: string
+  ): Promise<void>;
+
+  /**
+   * Create todos from a review result. Called on the first iteration only.
+   * If not implemented, no review-based todos are created.
+   */
+  createTodosFromReview?(
+    db: import("../db/connection.js").DrizzleInstance,
+    documentId: string,
+    tenantId: string,
+    reviewerSpec: ReviewerSpec,
+    result: unknown,
+    reviewId: string
+  ): Promise<void>;
 
   // ── Rendering ─────────────────────────────────────────────────────────
 

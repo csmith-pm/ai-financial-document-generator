@@ -7,12 +7,11 @@
 
 import { type AiProvider } from "../providers.js";
 import { type DrizzleInstance } from "../../db/connection.js";
-import { getAgentDefinition, type AgentType } from "../agents/definitions.js";
 import { negotiateSkill } from "./arbitration.js";
 import { pruneSkills } from "./pruning.js";
 
 interface ExtractedSkill {
-  targetAgent: AgentType;
+  targetAgent: string;
   skill: string;
   category: string;
   trigger: string;
@@ -90,8 +89,6 @@ export async function extractSkillsFromGfoaReview(
 ): Promise<void> {
   // Only extract from reviews with actionable feedback
   if (review.recommendations.length === 0) return;
-
-  const reviewerDef = getAgentDefinition("bb_reviewer");
 
   const userPrompt = `GFOA Review Results:
 - Total Score: ${review.totalScore}/180 (${review.passed ? "PASSED" : "NOT PASSED"})

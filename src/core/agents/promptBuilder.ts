@@ -1,15 +1,14 @@
 /**
  * Prompt Builder — assembles agent system prompts with accumulated skills.
  *
- * Loads base prompt from agent definition, then injects global + tenant
+ * Accepts a base system prompt, then injects global + tenant
  * skills ranked by confidence. Tenant skills override global skills in
  * the same category.
  */
 
-import { eq, and, or, isNull, desc } from "drizzle-orm";
+import { eq, and, or, desc } from "drizzle-orm";
 import { agentSkills } from "../../db/schema.js";
 import { type DrizzleInstance } from "../../db/connection.js";
-import { getAgentDefinition } from "./definitions.js";
 
 interface LoadedSkill {
   id: string;
@@ -24,14 +23,18 @@ const MAX_SKILLS_PER_PROMPT = 15;
 
 /**
  * Build the full system prompt for an agent, including accumulated skills.
+ *
+ * @param db - Database instance
+ * @param agentType - Agent type string used to look up skills (e.g. "bb_creator", "pafr_creator")
+ * @param tenantId - Tenant scope for skill lookup
+ * @param baseSystemPrompt - The agent's base system prompt to augment with skills
  */
 export async function buildAgentPrompt(
   db: DrizzleInstance,
   agentType: string,
-  tenantId: string
+  tenantId: string,
+  baseSystemPrompt: string
 ): Promise<string> {
-  const definition = getAgentDefinition(agentType as import("./definitions.js").AgentType);
-
   // Load active skills for this agent: global + tenant-specific
   const rows: LoadedSkill[] = await db
     .select({
@@ -83,7 +86,7 @@ export async function buildAgentPrompt(
     .slice(0, MAX_SKILLS_PER_PROMPT);
 
   if (selectedSkills.length === 0) {
-    return definition.baseSystemPrompt;
+    return baseSystemPrompt;
   }
 
   // Format skills as a guidelines section
@@ -92,7 +95,7 @@ export async function buildAgentPrompt(
     return `${i + 1}. [${s.category}]${triggerNote} ${s.skill}`;
   });
 
-  return `${definition.baseSystemPrompt}
+  return `${baseSystemPrompt}
 
 ## Learned Guidelines
 
