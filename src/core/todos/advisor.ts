@@ -1,8 +1,8 @@
 /**
- * BB_Advisor — handles conversational chat on todo items.
+ * Todo Advisor — handles conversational chat on todo items.
  *
  * Loads the todo context, prior messages, and builds a prompt
- * with BB_Advisor's agent definition + accumulated skills.
+ * with the doc type's advisor agent definition + accumulated skills.
  */
 
 import { eq, asc } from "drizzle-orm";
@@ -10,7 +10,7 @@ import { documentTodos, documentTodoMessages, documents } from "../../db/schema.
 import type { DrizzleInstance } from "../../db/connection.js";
 import type { AiProvider } from "../providers.js";
 import { buildAgentPrompt } from "../agents/promptBuilder.js";
-import { getAgentDefinition } from "../agents/definitions.js";
+import { defaultRegistry } from "../doc-type-registry.js";
 
 const MAX_HISTORY_MESSAGES = 20;
 
@@ -24,7 +24,7 @@ export async function handleTodoChat(
   todoId: string,
   userMessage: string
 ): Promise<string> {
-  // Load the todo and its budget book for context
+  // Load the todo and its document for context
   const [todo] = await db
     .select()
     .from(documentTodos)
@@ -35,11 +35,15 @@ export async function handleTodoChat(
     throw new Error(`Todo ${todoId} not found`);
   }
 
-  const [book] = await db
+  const [doc] = await db
     .select()
     .from(documents)
     .where(eq(documents.id, todo.documentId))
     .limit(1);
+
+  // Resolve the doc type to get the advisor agent
+  const docType = defaultRegistry.get(doc?.docType ?? "budget_book");
+  const advisorAgent = docType.getAgent(docType.advisorAgentType);
 
   // Load prior conversation messages (most recent N)
   const priorMessages = await db
@@ -65,7 +69,12 @@ export async function handleTodoChat(
   }
 
   // Build system prompt with skills
-  const systemPrompt = await buildAgentPrompt(db, "bb_advisor", tenantId);
+  const systemPrompt = await buildAgentPrompt(
+    db,
+    docType.advisorAgentType,
+    tenantId,
+    advisorAgent.baseSystemPrompt
+  );
 
   // Build context-enriched user prompt
   const todoContext = [
@@ -75,14 +84,14 @@ export async function handleTodoChat(
     `**Priority:** ${todo.priority}`,
     todo.sectionType ? `**Section:** ${todo.sectionType}` : null,
     `**Description:** ${todo.description}`,
-    book ? `\n## Budget Book Context\n**Title:** ${book.title}\n**Fiscal Year:** FY${book.fiscalYear}` : null,
+    doc ? `\n## Document Context\n**Title:** ${doc.title}\n**Fiscal Year:** FY${doc.fiscalYear}\n**Type:** ${doc.docType}` : null,
   ]
     .filter(Boolean)
     .join("\n");
 
   // Build conversation as a single user turn with history
   const historyLines = priorMessages.map((m: { role: string; content: string }) =>
-    `[${m.role === "agent" ? "BB_Advisor" : "User"}]: ${m.content}`
+    `[${m.role === "agent" ? advisorAgent.name : "User"}]: ${m.content}`
   );
 
   const fullUserPrompt = `${todoContext}
@@ -95,15 +104,14 @@ ${userMessage}
 
 Respond helpfully and concisely. If the user has provided enough information to resolve this action item, mention that they can mark it as resolved.`;
 
-  const definition = getAgentDefinition("bb_advisor");
   const result = await ai.callText(systemPrompt, fullUserPrompt, {
-    maxTokens: definition.maxTokens,
-    temperature: definition.temperature,
+    maxTokens: advisorAgent.maxTokens,
+    temperature: advisorAgent.temperature,
   });
 
   await ai.logUsage?.(
     tenantId,
-    "bb_advisor_chat",
+    `${docType.advisorAgentType}_chat`,
     result.inputTokens,
     result.outputTokens,
     result.model

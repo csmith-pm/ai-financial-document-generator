@@ -26,12 +26,6 @@ import type {
 } from "../../doc-type.js";
 import { buildAgentPrompt } from "../../agents/index.js";
 import { updateBookStatus, updateJobStatus } from "../executor.js";
-import {
-  extractSkillsFromGfoaReview,
-  extractSkillsFromAdaReview,
-} from "../../skills/extractor.js";
-import { createTodosFromGfoaReview } from "../../todos/creator.js";
-import type { GfoaReviewResult, AdaReviewResult } from "../../../doc-types/budget-book/review-types.js";
 import { renderAndUploadCharts } from "./render-charts.js";
 
 // ─── Types ───────────────────────────────────────────────────────────────
@@ -56,12 +50,13 @@ export async function runAllReviewers(
   const { ctx, docType } = pCtx;
 
   const reviewPromises = docType.reviewers.map(async (spec) => {
+    const definition = docType.getAgent(spec.agentType);
     const systemPrompt = await buildAgentPrompt(
       ctx.db,
       spec.agentType,
-      ctx.tenantId
+      ctx.tenantId,
+      definition.baseSystemPrompt
     );
-    const definition = docType.getAgent(spec.agentType);
     const userPrompt = spec.buildReviewPrompt(sections);
 
     const aiResult = await ctx.ai.callJson(systemPrompt, userPrompt, {
@@ -137,22 +132,14 @@ export async function extractSkillsFromResults(
   reviewRows: ReviewRow[]
 ): Promise<void> {
   try {
-    for (const row of reviewRows) {
-      // Dispatch to the correct extraction function based on reviewer ID
-      if (row.reviewerSpec.id === "gfoa") {
-        await extractSkillsFromGfoaReview(
+    if (pCtx.docType.extractSkillsFromReview) {
+      for (const row of reviewRows) {
+        await pCtx.docType.extractSkillsFromReview(
           pCtx.ctx.db,
           pCtx.ctx.ai,
           pCtx.ctx.tenantId,
-          row.result as GfoaReviewResult,
-          row.id
-        );
-      } else if (row.reviewerSpec.id === "ada") {
-        await extractSkillsFromAdaReview(
-          pCtx.ctx.db,
-          pCtx.ctx.ai,
-          pCtx.ctx.tenantId,
-          row.result as AdaReviewResult,
+          row.reviewerSpec,
+          row.result,
           row.id
         );
       }
@@ -171,15 +158,16 @@ export async function createFirstIterationTodos(
   pCtx: PipelineContext,
   reviewRows: ReviewRow[]
 ): Promise<void> {
-  for (const row of reviewRows) {
-    if (row.reviewerSpec.id === "gfoa") {
+  if (pCtx.docType.createTodosFromReview) {
+    for (const row of reviewRows) {
       const recs = row.reviewerSpec.getRecommendations(row.result);
       if (recs.length > 0) {
-        await createTodosFromGfoaReview(
+        await pCtx.docType.createTodosFromReview(
           pCtx.ctx.db,
           pCtx.documentId,
           pCtx.ctx.tenantId,
-          row.result as GfoaReviewResult,
+          row.reviewerSpec,
+          row.result,
           row.id
         );
       }
@@ -262,11 +250,12 @@ export async function reviseSectionsFromFeedback(
         state.styleAnalysis
       );
 
-      const creatorAgent = docType.getAgent("bb_creator");
+      const creatorAgent = docType.getAgent(docType.creatorAgentType);
       const basePrompt = await buildAgentPrompt(
         ctx.db,
-        "bb_creator",
-        ctx.tenantId
+        docType.creatorAgentType,
+        ctx.tenantId,
+        creatorAgent.baseSystemPrompt
       );
 
       const aiResult = await ctx.ai.callJson<SectionOutput>(
@@ -277,7 +266,7 @@ export async function reviseSectionsFromFeedback(
 
       await ctx.ai.logUsage?.(
         ctx.tenantId,
-        `bb_creator_revise_${section.sectionType}`,
+        `${docType.creatorAgentType}_revise_${section.sectionType}`,
         aiResult.inputTokens,
         aiResult.outputTokens,
         aiResult.model

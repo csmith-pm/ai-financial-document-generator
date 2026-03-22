@@ -8,8 +8,6 @@
 import { eq, and, asc } from "drizzle-orm";
 import { agentSkills } from "../../db/schema.js";
 import { type DrizzleInstance } from "../../db/connection.js";
-import type { AgentType } from "../agents/definitions.js";
-
 const MAX_SKILLS_PER_AGENT_CUSTOMER = 30;
 
 /**
@@ -18,7 +16,7 @@ const MAX_SKILLS_PER_AGENT_CUSTOMER = 30;
  */
 export async function pruneSkills(
   db: DrizzleInstance,
-  agentType: AgentType,
+  agentType: string,
   tenantId: string,
   maxSkills: number = MAX_SKILLS_PER_AGENT_CUSTOMER
 ): Promise<number> {
