@@ -6,7 +6,7 @@
  */
 
 import { eq, asc } from "drizzle-orm";
-import { budgetBookTodos, budgetBookTodoMessages, budgetBooks } from "../../db/schema.js";
+import { documentTodos, documentTodoMessages, documents } from "../../db/schema.js";
 import type { DrizzleInstance } from "../../db/connection.js";
 import type { AiProvider } from "../providers.js";
 import { buildAgentPrompt } from "../agents/promptBuilder.js";
@@ -27,8 +27,8 @@ export async function handleTodoChat(
   // Load the todo and its budget book for context
   const [todo] = await db
     .select()
-    .from(budgetBookTodos)
-    .where(eq(budgetBookTodos.id, todoId))
+    .from(documentTodos)
+    .where(eq(documentTodos.id, todoId))
     .limit(1);
 
   if (!todo) {
@@ -37,20 +37,20 @@ export async function handleTodoChat(
 
   const [book] = await db
     .select()
-    .from(budgetBooks)
-    .where(eq(budgetBooks.id, todo.budgetBookId))
+    .from(documents)
+    .where(eq(documents.id, todo.documentId))
     .limit(1);
 
   // Load prior conversation messages (most recent N)
   const priorMessages = await db
     .select()
-    .from(budgetBookTodoMessages)
-    .where(eq(budgetBookTodoMessages.todoId, todoId))
-    .orderBy(asc(budgetBookTodoMessages.createdAt))
+    .from(documentTodoMessages)
+    .where(eq(documentTodoMessages.todoId, todoId))
+    .orderBy(asc(documentTodoMessages.createdAt))
     .limit(MAX_HISTORY_MESSAGES);
 
   // Save the user message
-  await db.insert(budgetBookTodoMessages).values({
+  await db.insert(documentTodoMessages).values({
     todoId,
     role: "user",
     content: userMessage,
@@ -59,9 +59,9 @@ export async function handleTodoChat(
   // Update todo status to in_progress if still open
   if (todo.status === "open") {
     await db
-      .update(budgetBookTodos)
+      .update(documentTodos)
       .set({ status: "in_progress", updatedAt: new Date() })
-      .where(eq(budgetBookTodos.id, todoId));
+      .where(eq(documentTodos.id, todoId));
   }
 
   // Build system prompt with skills
@@ -110,7 +110,7 @@ Respond helpfully and concisely. If the user has provided enough information to 
   );
 
   // Save agent response
-  await db.insert(budgetBookTodoMessages).values({
+  await db.insert(documentTodoMessages).values({
     todoId,
     role: "agent",
     content: result.text,

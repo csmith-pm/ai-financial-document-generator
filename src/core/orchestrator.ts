@@ -17,12 +17,12 @@
 
 import { eq, and } from "drizzle-orm";
 import {
-  budgetBooks,
-  budgetBookSections,
-  budgetBookReviews,
-  budgetBookJobs,
-  budgetBookTodos,
-  budgetBookStatusEnum,
+  documents,
+  documentSections,
+  documentReviews,
+  documentJobs,
+  documentTodos,
+  documentStatusEnum,
 } from "../db/schema.js";
 import type { BudgetBookData } from "./providers.js";
 import { parseExcelBudget } from "./excelParser.js";
@@ -129,17 +129,17 @@ async function updateJobStatus(
   if (completedAt) setFields.completedAt = completedAt;
 
   await db
-    .update(budgetBookJobs)
+    .update(documentJobs)
     .set(setFields)
     .where(
       and(
-        eq(budgetBookJobs.budgetBookId, budgetBookId),
-        eq(budgetBookJobs.jobType, jobType)
+        eq(documentJobs.documentId, budgetBookId),
+        eq(documentJobs.jobType, jobType)
       )
     );
 }
 
-type BookStatus = (typeof budgetBookStatusEnum.enumValues)[number];
+type BookStatus = (typeof documentStatusEnum.enumValues)[number];
 
 async function updateBookStatus(
   db: DrizzleInstance,
@@ -147,9 +147,9 @@ async function updateBookStatus(
   status: BookStatus
 ): Promise<void> {
   await db
-    .update(budgetBooks)
+    .update(documents)
     .set({ status, updatedAt: new Date() })
-    .where(eq(budgetBooks.id, budgetBookId));
+    .where(eq(documents.id, budgetBookId));
 }
 
 // ---- Section Data Slicing ----
@@ -384,8 +384,8 @@ export async function orchestrateBudgetBookGeneration(
   // Load budget book record
   const [book] = await ctx.db
     .select()
-    .from(budgetBooks)
-    .where(eq(budgetBooks.id, budgetBookId))
+    .from(documents)
+    .where(eq(documents.id, budgetBookId))
     .limit(1);
 
   if (!book) {
@@ -418,12 +418,12 @@ export async function orchestrateBudgetBookGeneration(
         book.priorYearPdfS3Key
       );
       await ctx.db
-        .update(budgetBooks)
+        .update(documents)
         .set({
           styleAnalysis:
             styleAnalysis as unknown as Record<string, unknown>,
         })
-        .where(eq(budgetBooks.id, budgetBookId));
+        .where(eq(documents.id, budgetBookId));
     }
 
     await updateJobStatus(
@@ -448,9 +448,9 @@ export async function orchestrateBudgetBookGeneration(
 
     let budgetData: BudgetBookData;
 
-    if (book.dataSource === "upload" && book.uploadedBudgetS3Key) {
+    if (book.dataSource === "upload" && book.uploadedDataS3Key) {
       // Upload path: parse the Excel file with Claude
-      const excelBuffer = await ctx.storage.getObject(book.uploadedBudgetS3Key);
+      const excelBuffer = await ctx.storage.getObject(book.uploadedDataS3Key);
       budgetData = await parseExcelBudget(ctx.ai, excelBuffer, fiscalYear);
     } else if (book.worksheetId) {
       // Module path: query the database
@@ -562,8 +562,8 @@ export async function orchestrateBudgetBookGeneration(
         budgetBookId
       );
 
-      await ctx.db.insert(budgetBookSections).values({
-        budgetBookId,
+      await ctx.db.insert(documentSections).values({
+        documentId: budgetBookId,
         tenantId: ctx.tenantId,
         sectionType: section.sectionType,
         sectionOrder: SECTION_TYPES.indexOf(section.sectionType),
@@ -596,9 +596,9 @@ export async function orchestrateBudgetBookGeneration(
     while (iteration < maxIterations) {
       iteration++;
       await ctx.db
-        .update(budgetBooks)
+        .update(documents)
         .set({ currentIteration: iteration })
-        .where(eq(budgetBooks.id, budgetBookId));
+        .where(eq(documents.id, budgetBookId));
 
       // Run GFOA + ADA reviews in parallel
       await updateJobStatus(
@@ -625,9 +625,9 @@ export async function orchestrateBudgetBookGeneration(
 
       // Save GFOA review (capture the ID for skill extraction + todo linking)
       const [gfoaReviewRow] = await ctx.db
-        .insert(budgetBookReviews)
+        .insert(documentReviews)
         .values({
-          budgetBookId,
+          documentId: budgetBookId,
           tenantId: ctx.tenantId,
           reviewerType: "gfoa",
           iteration,
@@ -637,7 +637,7 @@ export async function orchestrateBudgetBookGeneration(
           recommendations:
             gfoaResult.recommendations as unknown as Record<string, unknown>[],
         })
-        .returning({ id: budgetBookReviews.id });
+        .returning({ id: documentReviews.id });
 
       await updateJobStatus(
         ctx.db,
@@ -650,9 +650,9 @@ export async function orchestrateBudgetBookGeneration(
 
       // Save ADA review
       const [adaReviewRow] = await ctx.db
-        .insert(budgetBookReviews)
+        .insert(documentReviews)
         .values({
-          budgetBookId,
+          documentId: budgetBookId,
           tenantId: ctx.tenantId,
           reviewerType: "ada",
           iteration,
@@ -664,7 +664,7 @@ export async function orchestrateBudgetBookGeneration(
             ...adaResult.webIssues,
           ] as unknown as Record<string, unknown>[],
         })
-        .returning({ id: budgetBookReviews.id });
+        .returning({ id: documentReviews.id });
 
       await updateJobStatus(
         ctx.db,
@@ -793,7 +793,7 @@ export async function orchestrateBudgetBookGeneration(
         );
 
         await ctx.db
-          .update(budgetBookSections)
+          .update(documentSections)
           .set({
             narrativeContent: section.narrativeContent,
             tableData: section.tableData,
@@ -804,8 +804,8 @@ export async function orchestrateBudgetBookGeneration(
           })
           .where(
             and(
-              eq(budgetBookSections.budgetBookId, budgetBookId),
-              eq(budgetBookSections.sectionType, section.sectionType)
+              eq(documentSections.documentId, budgetBookId),
+              eq(documentSections.sectionType, section.sectionType)
             )
           );
       }
@@ -832,9 +832,9 @@ export async function orchestrateBudgetBookGeneration(
 
     const sectionRows = await ctx.db
       .select()
-      .from(budgetBookSections)
-      .where(eq(budgetBookSections.budgetBookId, budgetBookId))
-      .orderBy(budgetBookSections.sectionOrder);
+      .from(documentSections)
+      .where(eq(documentSections.documentId, budgetBookId))
+      .orderBy(documentSections.sectionOrder);
 
     const chartImages: Map<string, Buffer[]> = new Map();
     for (const row of sectionRows) {
@@ -864,14 +864,14 @@ export async function orchestrateBudgetBookGeneration(
     await ctx.storage.upload(pdfKey, pdfBuffer, "application/pdf");
 
     await ctx.db
-      .update(budgetBooks)
+      .update(documents)
       .set({
         generatedPdfS3Key: pdfKey,
         webPreviewData:
           currentSections as unknown as Record<string, unknown>,
         updatedAt: new Date(),
       })
-      .where(eq(budgetBooks.id, budgetBookId));
+      .where(eq(documents.id, budgetBookId));
 
     await updateJobStatus(
       ctx.db,
@@ -893,12 +893,12 @@ export async function orchestrateBudgetBookGeneration(
     );
 
     const openTodos = await ctx.db
-      .select({ id: budgetBookTodos.id })
-      .from(budgetBookTodos)
+      .select({ id: documentTodos.id })
+      .from(documentTodos)
       .where(
         and(
-          eq(budgetBookTodos.budgetBookId, budgetBookId),
-          eq(budgetBookTodos.status, "open")
+          eq(documentTodos.documentId, budgetBookId),
+          eq(documentTodos.status, "open")
         )
       )
       .limit(1);
@@ -922,7 +922,7 @@ export async function orchestrateBudgetBookGeneration(
     await updateBookStatus(ctx.db, budgetBookId, "failed");
 
     await ctx.db
-      .update(budgetBookJobs)
+      .update(documentJobs)
       .set({
         status: "failed",
         error: message,
@@ -930,8 +930,8 @@ export async function orchestrateBudgetBookGeneration(
       })
       .where(
         and(
-          eq(budgetBookJobs.budgetBookId, budgetBookId),
-          eq(budgetBookJobs.status, "running")
+          eq(documentJobs.documentId, budgetBookId),
+          eq(documentJobs.status, "running")
         )
       );
 
@@ -947,8 +947,8 @@ export async function resumeBudgetBookGeneration(
 ): Promise<void> {
   const [book] = await ctx.db
     .select()
-    .from(budgetBooks)
-    .where(eq(budgetBooks.id, budgetBookId))
+    .from(documents)
+    .where(eq(documents.id, budgetBookId))
     .limit(1);
 
   if (!book) {
@@ -967,18 +967,18 @@ export async function resumeBudgetBookGeneration(
 
   // Clean up previous generation artifacts
   await ctx.db
-    .delete(budgetBookSections)
-    .where(eq(budgetBookSections.budgetBookId, budgetBookId));
+    .delete(documentSections)
+    .where(eq(documentSections.documentId, budgetBookId));
   await ctx.db
-    .delete(budgetBookReviews)
-    .where(eq(budgetBookReviews.budgetBookId, budgetBookId));
+    .delete(documentReviews)
+    .where(eq(documentReviews.documentId, budgetBookId));
   await ctx.db
-    .delete(budgetBookJobs)
-    .where(eq(budgetBookJobs.budgetBookId, budgetBookId));
+    .delete(documentJobs)
+    .where(eq(documentJobs.documentId, budgetBookId));
 
   // Reset book state
   await ctx.db
-    .update(budgetBooks)
+    .update(documents)
     .set({
       status: "draft",
       currentIteration: 0,
@@ -986,7 +986,7 @@ export async function resumeBudgetBookGeneration(
       webPreviewData: null,
       updatedAt: new Date(),
     })
-    .where(eq(budgetBooks.id, budgetBookId));
+    .where(eq(documents.id, budgetBookId));
 
   // Run full generation again (with updated data + accumulated skills)
   await orchestrateBudgetBookGeneration(ctx, budgetBookId);

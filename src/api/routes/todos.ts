@@ -1,9 +1,9 @@
 import type { FastifyInstance } from "fastify";
 import { eq, and } from "drizzle-orm";
 import {
-  budgetBooks,
-  budgetBookTodos,
-  budgetBookTodoMessages,
+  documents,
+  documentTodos,
+  documentTodoMessages,
 } from "../../db/schema.js";
 import type { DrizzleInstance } from "../../db/connection.js";
 import type { AiProvider, StorageProvider } from "../../core/providers.js";
@@ -34,9 +34,9 @@ export async function todosRoutes(
 
     // Verify book belongs to tenant
     const [book] = await db
-      .select({ id: budgetBooks.id })
-      .from(budgetBooks)
-      .where(and(eq(budgetBooks.id, bookId), eq(budgetBooks.tenantId, tenantId)))
+      .select({ id: documents.id })
+      .from(documents)
+      .where(and(eq(documents.id, bookId), eq(documents.tenantId, tenantId)))
       .limit(1);
 
     if (!book) {
@@ -46,9 +46,9 @@ export async function todosRoutes(
 
     const todos = await db
       .select()
-      .from(budgetBookTodos)
-      .where(eq(budgetBookTodos.budgetBookId, bookId))
-      .orderBy(budgetBookTodos.createdAt);
+      .from(documentTodos)
+      .where(eq(documentTodos.documentId, bookId))
+      .orderBy(documentTodos.createdAt);
 
     return { bookId, todos };
   });
@@ -60,9 +60,9 @@ export async function todosRoutes(
 
     const [todo] = await db
       .select()
-      .from(budgetBookTodos)
+      .from(documentTodos)
       .where(
-        and(eq(budgetBookTodos.id, id), eq(budgetBookTodos.tenantId, tenantId))
+        and(eq(documentTodos.id, id), eq(documentTodos.tenantId, tenantId))
       )
       .limit(1);
 
@@ -73,9 +73,9 @@ export async function todosRoutes(
 
     const messages = await db
       .select()
-      .from(budgetBookTodoMessages)
-      .where(eq(budgetBookTodoMessages.todoId, id))
-      .orderBy(budgetBookTodoMessages.createdAt);
+      .from(documentTodoMessages)
+      .where(eq(documentTodoMessages.todoId, id))
+      .orderBy(documentTodoMessages.createdAt);
 
     return { todo, messages };
   });
@@ -88,9 +88,9 @@ export async function todosRoutes(
 
     const [todo] = await db
       .select()
-      .from(budgetBookTodos)
+      .from(documentTodos)
       .where(
-        and(eq(budgetBookTodos.id, id), eq(budgetBookTodos.tenantId, tenantId))
+        and(eq(documentTodos.id, id), eq(documentTodos.tenantId, tenantId))
       )
       .limit(1);
 
@@ -110,9 +110,9 @@ export async function todosRoutes(
 
     const [todo] = await db
       .select()
-      .from(budgetBookTodos)
+      .from(documentTodos)
       .where(
-        and(eq(budgetBookTodos.id, id), eq(budgetBookTodos.tenantId, tenantId))
+        and(eq(documentTodos.id, id), eq(documentTodos.tenantId, tenantId))
       )
       .limit(1);
 
@@ -142,9 +142,9 @@ export async function todosRoutes(
 
     const [todo] = await db
       .select()
-      .from(budgetBookTodos)
+      .from(documentTodos)
       .where(
-        and(eq(budgetBookTodos.id, id), eq(budgetBookTodos.tenantId, tenantId))
+        and(eq(documentTodos.id, id), eq(documentTodos.tenantId, tenantId))
       )
       .limit(1);
 
@@ -154,9 +154,9 @@ export async function todosRoutes(
     }
 
     const [updated] = await db
-      .update(budgetBookTodos)
+      .update(documentTodos)
       .set({ status, updatedAt: new Date() })
-      .where(eq(budgetBookTodos.id, id))
+      .where(eq(documentTodos.id, id))
       .returning();
 
     return updated;
