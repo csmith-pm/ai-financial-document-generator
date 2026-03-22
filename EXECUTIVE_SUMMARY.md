@@ -100,10 +100,11 @@ We're not starting from zero. ClearGov already has **~1,600 customers producing 
 | ClearGov customers (budget book) | ~1,600 |
 | ClearGov customers (ACFR) | ~250 |
 | Current ClearGov software pricing | $15,000 - $40,000/year |
-| **Blended ARPU (Year 1, flagships only)** | **~$20,000** |
-| **Blended ARPU (Year 3, full suite)** | **~$30,000+** |
+| **New platform fee** | **$10,000/year** |
+| **Blended ARPU (Year 1, platform + flagships)** | **~$25,000** |
+| **Blended ARPU (Year 3, platform + full suite)** | **~$35,000+** |
 
-For context: ClearGov already charges **$15,000-$40,000/year** for budget book software alone. AI-powered document generation isn't a discount offering — it's a **premium add-on** to an already premium product that delivers 10x the labor savings.
+The new model **lowers the entry point** from $15K-$40K to a $10K platform fee — making Document Engine accessible to smaller entities — while **document agent fees create uncapped usage-based upside** that grows as customers adopt more document types. A municipality that was paying $25K for static software now pays $10K + per-document generation fees, getting dramatically more value at a comparable or higher total spend.
 
 **Adjacent markets multiply the opportunity further:**
 
@@ -139,24 +140,40 @@ License to audit firms and government consulting practices who produce these doc
 
 ### Pricing Model
 
-**Tiered per-document pricing** that scales with complexity and value delivered:
+**Platform fee + per-document agent pricing** — a simple, scalable model that grows with usage:
 
-| Package | What's Included | Annual Price |
-|---------|----------------|-------------|
-| **Complete Suite** | All document types — flagships, mid-complexity, unlimited recurring | $25,000 - $50,000/year |
-| **Core** | Flagship + mid-complexity documents (Budget Book, ACFR, PAFR, CIP) | $15,000 - $25,000/year |
-| **Essentials** | Recurring documents only (Budget-in-Brief, monthly actuals, disclosures) | $5,000 - $10,000/year |
-| **Enterprise** | Custom document types, dedicated training, priority support, API access | Custom pricing |
+#### Platform Fee: $10,000/year
+Every customer pays a flat **$10,000 annual platform fee** for access to the Document Engine infrastructure — data upload, document management, the self-improving skill system, and the web UI. This replaces the existing $15,000-$40,000 document management software fee with a **lower entry point** that dramatically expands accessibility while creating a guaranteed revenue floor.
 
-**A la carte generation** is also available for entities that need occasional documents without a subscription commitment:
+#### Document Agent Access (per document, by tier)
 
-| Tier | Per-Document Price |
-|------|-------------------|
-| Flagship (Budget Book, ACFR) | $5,000 - $10,000 |
-| Mid-Complexity (PAFR, CIP, Enterprise Fund) | $2,000 - $5,000 |
-| Recurring (Budget-in-Brief, Monthly Actuals) | $500 - $2,000 |
+| Tier | Document Types | Per-Document Price | Manual Labor Replaced |
+|------|---------------|-------------------|----------------------|
+| **Flagship** | Budget Book, ACFR | $5,000 - $10,000 | 150-500+ hours ($7,500 - $50,000 in staff cost) |
+| **Mid-Complexity** | PAFR, Capital Improvement Plan, Enterprise Fund Report | $2,000 - $5,000 | 40-100 hours ($2,000 - $10,000 in staff cost) |
+| **Recurring** | Budget-in-Brief, Monthly Budget-to-Actuals, Special District Disclosures | $500 - $2,000 | 10-40 hours ($500 - $4,000 in staff cost) |
 
-Every tier delivers **massive ROI**: a flagship document that costs $50,000 in staff labor is produced for $5,000-$10,000 — a **5-10x return** from day one.
+**The customer math is simple:** A municipality that produces a Budget Book ($7,500), a PAFR ($3,000), a Budget-in-Brief ($1,000), and 12 monthly actuals ($500 × 12 = $6,000) pays **$27,500/year** — platform fee plus document agents. They were spending **$50,000-$100,000+** in staff labor alone. That's a **3-4x return** before factoring in speed, compliance, and quality improvements.
+
+#### Volume Bundles
+For high-volume customers producing 6+ documents per year, bundled pricing offers 15-25% discounts, incentivizing adoption across the full document portfolio.
+
+### Internal R&D Savings
+
+The Document Engine doesn't just generate revenue — it **fundamentally changes our cost structure**.
+
+ClearGov currently employs **~20 full-time R&D staff** building and maintaining document management applications (budget book builder, ACFR tools, report designers). With Document Engine replacing hand-coded document logic with AI-powered generation:
+
+| | **Current State** | **With Document Engine** |
+|---|---|---|
+| **R&D headcount (document apps)** | ~20 FTEs | ~10 FTEs |
+| **Avg fully-loaded cost/engineer** | ~$200,000 | ~$200,000 |
+| **Annual R&D spend** | ~$4,000,000 | ~$2,000,000 |
+| **Annual savings** | — | **~$2,000,000** |
+
+Instead of building bespoke document features in code, R&D effort shifts to **training document agents** and **adding new document types** — work that takes weeks, not quarters. The remaining team focuses on platform infrastructure, data connectors, and the AI engine itself, while document-type-specific logic lives in agent definitions rather than application code.
+
+**This $2M/year in R&D savings hits the bottom line immediately** and compounds as we add new document types without proportional headcount growth.
 
 ### Revenue Projections
 
@@ -164,14 +181,17 @@ Anchored to ClearGov's existing customer base of ~1,600 budget book customers an
 
 | | **Year 1** | **Year 2** | **Year 3** |
 |---|---|---|---|
-| **Customers** | 400-500 (existing base penetration) | 2,000-4,000 (base + new logos) | 8,000-12,000 (market expansion) |
-| **Base penetration** | 20-30% of budget book; 10-15% of ACFR | 50%+ of existing base | 80%+ of base; K-12, special districts |
-| **Avg docs/customer** | 2-3 (flagships) | 4-6 (flagships + mid) | 6-10 (full suite) |
-| **Blended ARPU** | ~$20,000 | ~$25,000 | ~$30,000+ |
-| **ARR** | **$8M - $10M** | **$25M - $50M** | **$60M - $100M+** |
+| **Customers** | 400-500 (existing base) | 2,000-4,000 (base + new logos) | 8,000-12,000 (market expansion) |
+| **Platform fee revenue** | $4M - $5M | $20M - $40M | $80M - $120M |
+| **Avg doc agent revenue/customer** | ~$15,000 (2-3 flagships) | ~$20,000 (4-6 docs, mixed tiers) | ~$25,000+ (6-10 docs, full suite) |
+| **Doc agent revenue** | $6M - $7.5M | $40M - $80M | $200M - $300M |
+| **Total ARR** | **$10M - $12.5M** | **$60M - $120M** | **$280M - $420M+** |
+| **R&D savings (cumulative)** | $2M | $4M | $6M |
 | **Key driver** | ClearGov upsell (zero friction) | New entity acquisition + doc expansion | Partner channel + international |
 
 **Why penetration is fast:** These aren't cold prospects. ClearGov's 1,600+ budget book customers already have their financial data on our platform. Document generation is a one-click upsell — not a new buying decision. The sales motion is "turn on the feature," not "evaluate a new vendor."
+
+**Why the numbers scale:** The platform fee creates a **guaranteed revenue floor** ($10K × customers), while per-document pricing captures **usage-based upside** as customers expand their document portfolio. A customer that starts with one Budget Book in Year 1 is producing 8-10 documents across all three tiers by Year 3 — and paying 3x more without ever feeling like the price went up.
 
 ---
 
@@ -205,7 +225,7 @@ Anchored to ClearGov's existing customer base of ~1,600 budget book customers an
 
 Twenty thousand government entities. Four to ten documents each. Hundreds of hours of manual labor per document. **That's millions of hours of work — every single year — waiting to be automated.**
 
-Document Engine eliminates 80-90% of that labor while delivering higher quality, guaranteed compliance, and continuous improvement. With 1,600+ captive customers already on the ClearGov platform, this isn't a cold-start play — it's a feature flip away from an **$8-10M Year 1 revenue line** scaling to **$100M+ by Year 3**.
+Document Engine eliminates 80-90% of that labor while delivering higher quality, guaranteed compliance, and continuous improvement. With 1,600+ captive customers already on the ClearGov platform, this isn't a cold-start play — it's a feature flip away from a **$10M+ Year 1 revenue line** scaling to **$400M+ by Year 3**, with **$2M/year in immediate R&D savings** on top.
 
 The technology is built. The architecture is proven. The customers are waiting.
 
