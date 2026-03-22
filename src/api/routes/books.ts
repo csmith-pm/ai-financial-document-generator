@@ -1,3 +1,14 @@
+/**
+ * Backward-compatible `/api/books` routes.
+ *
+ * These routes preserve the original budget-book API endpoints.
+ * They perform the same DB operations as the generic `/api/documents`
+ * routes but use the legacy `/api/books` URL paths and "budget-books"
+ * S3 prefix.
+ *
+ * @deprecated Consumers should migrate to `/api/documents` endpoints.
+ */
+
 import type { FastifyInstance } from "fastify";
 import { eq, and } from "drizzle-orm";
 import {
@@ -189,8 +200,8 @@ export async function booksRoutes(
       });
     }
 
-    // Enqueue generation job
-    await queue.enqueue("generate-budget-book", {
+    // Enqueue generation job (use generic name — worker handles both)
+    await queue.enqueue("generate-document", {
       documentId: id,
       tenantId,
     });
@@ -225,7 +236,7 @@ export async function booksRoutes(
       return;
     }
 
-    await queue.enqueue("regenerate-budget-book", {
+    await queue.enqueue("regenerate-document", {
       documentId: id,
       tenantId,
     });

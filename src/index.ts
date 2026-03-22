@@ -12,8 +12,7 @@ import { createServer } from "./api/server.js";
 import { startWorker } from "./worker/index.js";
 import {
   orchestrateDocumentGeneration,
-  orchestrateBudgetBookGeneration,
-  resumeBudgetBookGeneration,
+  resumeDocumentGeneration,
 } from "./core/orchestrator.js";
 
 // Register document types (side-effect import)
@@ -40,12 +39,21 @@ export { BullMQQueueProvider } from "./providers/bullmq.js";
 // Re-export schema for migrations
 export * from "./db/schema.js";
 
-export interface BudgetBookEngine {
-  generate(budgetBookId: string, tenantId: string): Promise<void>;
+// ─── Engine Interfaces ────────────────────────────────────────────────
+
+export interface DocumentEngine {
+  /** Generate a document by ID */
+  generate(documentId: string, tenantId: string): Promise<void>;
+  /** Start the HTTP API server */
   startServer(port?: number): Promise<FastifyInstance>;
+  /** Start the background job worker */
   startWorker(): void;
+  /** Gracefully shut down connections */
   shutdown(): Promise<void>;
 }
+
+/** @deprecated Use DocumentEngine instead. */
+export type BudgetBookEngine = DocumentEngine;
 
 export interface CreateEngineOptions {
   connectionString: string;
@@ -59,9 +67,15 @@ export interface CreateEngineOptions {
   chartsEnabled?: boolean;
 }
 
-export function createBudgetBookEngine(
+/**
+ * Create a document engine instance.
+ *
+ * The engine handles any registered document type. It wires up the
+ * database, providers, HTTP server, and background worker.
+ */
+export function createDocumentEngine(
   options: CreateEngineOptions
-): BudgetBookEngine {
+): DocumentEngine {
   const pool = createPool(options.connectionString);
   const db = createDb(pool);
 
@@ -81,9 +95,9 @@ export function createBudgetBookEngine(
   }
 
   return {
-    async generate(budgetBookId: string, tenantId: string): Promise<void> {
+    async generate(documentId: string, tenantId: string): Promise<void> {
       const ctx = createContext(tenantId);
-      await orchestrateBudgetBookGeneration(ctx, budgetBookId);
+      await orchestrateDocumentGeneration(ctx, documentId);
     },
 
     async startServer(port = 4000): Promise<FastifyInstance> {
@@ -110,3 +124,9 @@ export function createBudgetBookEngine(
     },
   };
 }
+
+/**
+ * @deprecated Use createDocumentEngine instead.
+ * Kept for backward compatibility.
+ */
+export const createBudgetBookEngine = createDocumentEngine;
