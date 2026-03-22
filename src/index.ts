@@ -11,6 +11,7 @@ import { createPool, createDb } from "./db/connection.js";
 import { createServer } from "./api/server.js";
 import { startWorker } from "./worker/index.js";
 import {
+  orchestrateDocumentGeneration,
   orchestrateBudgetBookGeneration,
   resumeBudgetBookGeneration,
 } from "./core/orchestrator.js";
@@ -23,8 +24,11 @@ export type { AiProvider, StorageProvider, DataProvider, QueueProvider, EngineCo
 export type { EngineContext } from "./core/context.js";
 export type { BudgetBookData } from "./core/providers.js";
 export type { StyleAnalysis } from "./core/types.js";
-export type { DocumentTypeDefinition } from "./core/doc-type.js";
+export type { DocumentTypeDefinition, SectionOutput, ReviewerSpec } from "./core/doc-type.js";
+export type { PipelineStep, PipelineContext, PipelineState, StepResult } from "./core/pipeline/types.js";
 export { defaultRegistry } from "./doc-types/index.js";
+export { orchestrateDocumentGeneration, resumeDocumentGeneration } from "./core/orchestrator.js";
+export { buildDefaultPipeline, runPipeline } from "./core/pipeline/index.js";
 
 // Re-export provider implementations
 export { AnthropicAiProvider } from "./providers/anthropic.js";

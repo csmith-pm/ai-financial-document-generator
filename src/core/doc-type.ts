@@ -6,7 +6,7 @@
  * behaviour is provided through this interface.
  */
 
-import type { ZodSchema } from "zod";
+import type { ZodSchema, ZodType } from "zod";
 import type { AiProvider, StorageProvider } from "./providers.js";
 import type { StyleAnalysis } from "./types.js";
 import type { ChartConfig } from "./chartTypes.js";
@@ -43,8 +43,28 @@ export interface GenericAgentDefinition {
 }
 
 export interface ReviewerSpec {
+  /** Unique reviewer identifier, e.g. "gfoa", "ada" */
   id: string;
+  /** Agent type used for this reviewer, e.g. "bb_reviewer", "ada_reviewer" */
   agentType: string;
+
+  /** Build the user prompt for this reviewer given generated sections */
+  buildReviewPrompt(sections: SectionOutput[]): string;
+
+  /** Zod schema to validate the AI's review response */
+  resultSchema: ZodType;
+
+  /** Determine if the review result indicates a pass */
+  isPassed(result: unknown): boolean;
+
+  /** Extract a numeric score from the result, or null if not scored */
+  getScore(result: unknown): number | null;
+
+  /** Extract recommendations as generic records for DB storage */
+  getRecommendations(result: unknown): Record<string, unknown>[];
+
+  /** Extract feedback strings for a specific section from the review result */
+  getFeedbackForSection(result: unknown, sectionType: string): string[];
 }
 
 export interface SeedSkill {
@@ -116,6 +136,34 @@ export interface DocumentTypeDefinition<TData = unknown> {
 
   /** Agent type used for conversational todo chat */
   advisorAgentType: string;
+
+  // ── Iteration Control ───────────────────────────────────────────────
+
+  /** S3 path prefix for this doc type's artifacts, e.g. "budget-books" */
+  storagePrefix: string;
+
+  /**
+   * Build the revision prompt for a section given reviewer feedback.
+   * Returns the system prompt suffix and user prompt for the revision call.
+   */
+  buildRevisionPrompt?(
+    section: SectionOutput,
+    feedbackByReviewer: Map<string, string[]>,
+    data: unknown,
+    style: StyleAnalysis | null
+  ): { systemPromptSuffix: string; userPrompt: string };
+
+  /**
+   * Determine if the review-revise iteration loop should continue.
+   * Called after each review round.
+   * Returns true to continue iterating, false to stop.
+   * If not implemented, defaults to: stop when all reviewers pass.
+   */
+  shouldContinueIterating?(
+    results: Map<string, { passed: boolean; score: number | null }>,
+    iteration: number,
+    previousScores: Map<string, number | null>
+  ): boolean;
 
   // ── Rendering ─────────────────────────────────────────────────────────
 
