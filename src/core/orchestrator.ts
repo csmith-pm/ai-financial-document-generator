@@ -25,18 +25,14 @@ import {
   documentStatusEnum,
 } from "../db/schema.js";
 import type { BudgetBookData } from "./providers.js";
-import { parseExcelBudget } from "./excelParser.js";
-import { analyzePriorYearPdf } from "./pdfAnalyzer.js";
 import type { StyleAnalysis } from "./types.js";
 import { renderChartsForSection } from "./chartRenderer.js";
-import { renderBudgetBookPdf } from "./budgetBookPdf.js";
-import { buildAgentPrompt, getAgentDefinition } from "./agents/index.js";
+import { buildAgentPrompt } from "./agents/index.js";
 import { seedGlobalSkills } from "./skills/seeds.js";
 import {
   extractSkillsFromGfoaReview,
   extractSkillsFromAdaReview,
 } from "./skills/extractor.js";
-import { detectDataGaps } from "./todos/detector.js";
 import {
   createTodosFromDataGaps,
   createTodosFromGfoaReview,
@@ -44,61 +40,19 @@ import {
 import type { ChartConfig } from "./chartTypes.js";
 import type { EngineContext } from "./context.js";
 import type { DrizzleInstance } from "../db/connection.js";
+import { defaultRegistry } from "./doc-type-registry.js";
+import type { DocumentTypeDefinition } from "./doc-type.js";
 
-const SECTION_TYPES = [
-  "executive_summary",
-  "community_profile",
-  "revenue_summary",
-  "expenditure_summary",
-  "personnel_summary",
-  "capital_summary",
-  "multi_year_outlook",
-  "appendix",
-  "cover",
-  "toc",
-] as const;
+// Types re-imported from budget-book doc type for internal use
+import type { GfoaReviewResult, AdaReviewResult } from "../doc-types/budget-book/review-types.js";
 
-type SectionType = (typeof SECTION_TYPES)[number];
-
+// Section types come from the doc type at runtime
 interface SectionOutput {
-  sectionType: SectionType;
+  sectionType: string;
   title: string;
   narrativeContent: string;
   tableData: Record<string, unknown>[];
   chartConfigs: ChartConfig[];
-}
-
-interface GfoaScore {
-  category: string;
-  maxPoints: number;
-  awardedPoints: number;
-  feedback: string;
-}
-
-interface GfoaReviewResult {
-  scores: GfoaScore[];
-  totalScore: number;
-  passed: boolean;
-  recommendations: Array<{
-    section: string;
-    priority: "high" | "medium" | "low";
-    issue: string;
-    suggestion: string;
-  }>;
-}
-
-interface AdaIssue {
-  rule: string;
-  severity: "critical" | "major" | "minor";
-  location: string;
-  description: string;
-  fix: string;
-}
-
-interface AdaReviewResult {
-  pdfIssues: AdaIssue[];
-  webIssues: AdaIssue[];
-  passed: boolean;
 }
 
 // ---- Job Progress Helpers ----
@@ -152,89 +106,23 @@ async function updateBookStatus(
     .where(eq(documents.id, budgetBookId));
 }
 
-// ---- Section Data Slicing ----
-
-function getSectionData(
-  sectionType: SectionType,
-  data: BudgetBookData
-): Record<string, unknown> {
-  switch (sectionType) {
-    case "executive_summary":
-      return {
-        executiveSummary: data.executiveSummary,
-        fiscalYear: data.fiscalYear,
-        communityProfile: data.communityProfile,
-      };
-    case "community_profile":
-      return { communityProfile: data.communityProfile };
-    case "revenue_summary":
-      return { revenueDetail: data.revenueDetail, fiscalYear: data.fiscalYear };
-    case "expenditure_summary":
-      return {
-        expenditureByDepartment: data.expenditureByDepartment,
-        fiscalYear: data.fiscalYear,
-      };
-    case "personnel_summary":
-      return {
-        personnelDetail: data.personnelDetail,
-        fiscalYear: data.fiscalYear,
-      };
-    case "capital_summary":
-      return { capitalDetail: data.capitalProjects, fiscalYear: data.fiscalYear };
-    case "multi_year_outlook":
-      return {
-        multiYearProjections: data.multiYearProjections,
-        executiveSummary: data.executiveSummary,
-        fiscalYear: data.fiscalYear,
-      };
-    case "appendix":
-      return {
-        fiscalYear: data.fiscalYear,
-        communityProfile: data.communityProfile,
-      };
-    case "cover":
-      return {
-        fiscalYear: data.fiscalYear,
-        communityProfile: data.communityProfile,
-      };
-    case "toc":
-      return { fiscalYear: data.fiscalYear };
-    default:
-      return { fiscalYear: data.fiscalYear };
-  }
-}
-
-// ---- Section Generation (using agent definitions + skills) ----
-
-function getSectionPrompt(
-  sectionType: SectionType,
-  data: BudgetBookData,
-  styleAnalysis: StyleAnalysis | null
-): string {
-  const styleGuidance = styleAnalysis
-    ? `\n\nStyle guidance from prior-year budget book:\n- Tone: ${styleAnalysis.narrativeTone}\n- Chart types used: ${styleAnalysis.chartTypes.join(", ")}\n- Overall style: ${styleAnalysis.overallStyle}`
-    : "";
-
-  const base = `Generate the "${sectionType}" section for a FY${data.fiscalYear} municipal budget book for ${data.communityProfile.name}.${styleGuidance}`;
-  const dataSlice = getSectionData(sectionType, data);
-
-  return `${base}\n\nRelevant data:\n${JSON.stringify(dataSlice, null, 2)}\n\nRespond with JSON matching this structure:\n{\n  "sectionType": "${sectionType}",\n  "title": "Section Title",\n  "narrativeContent": "Professional prose with specific dollar amounts...",\n  "tableData": [{"header": true, "cells": ["Col1", "Col2"]}, {"cells": ["val1", "val2"]}],\n  "chartConfigs": [{"type": "bar|pie|line|stacked-bar|grouped-bar", "title": "...", "categoryKey": "...", "dataKeys": ["..."], "width": 800, "height": 400, "data": [...]}]\n}`;
-}
+// ---- Section Generation (using doc type + agent definitions + skills) ----
 
 async function generateSection(
   ctx: EngineContext,
-  sectionType: SectionType,
+  docType: DocumentTypeDefinition,
+  sectionType: string,
   data: BudgetBookData,
   styleAnalysis: StyleAnalysis | null
 ): Promise<SectionOutput> {
+  const creatorAgent = docType.getAgent("bb_creator");
   const systemPrompt = await buildAgentPrompt(ctx.db, "bb_creator", ctx.tenantId);
-  const userPrompt = getSectionPrompt(sectionType, data, styleAnalysis);
-  const definition = getAgentDefinition("bb_creator");
+  const userPrompt = docType.getSectionPrompt(sectionType, data, styleAnalysis);
 
   const result = await ctx.ai.callJson<SectionOutput>(
     systemPrompt,
     userPrompt,
-    { maxTokens: definition.maxTokens, temperature: definition.temperature }
+    { maxTokens: creatorAgent.maxTokens, temperature: creatorAgent.temperature }
   );
 
   await ctx.ai.logUsage?.(
@@ -252,10 +140,11 @@ async function generateSection(
 
 async function runGfoaReview(
   ctx: EngineContext,
+  docType: DocumentTypeDefinition,
   sections: SectionOutput[]
 ): Promise<GfoaReviewResult> {
   const systemPrompt = await buildAgentPrompt(ctx.db, "bb_reviewer", ctx.tenantId);
-  const definition = getAgentDefinition("bb_reviewer");
+  const definition = docType.getAgent("bb_reviewer");
 
   const sectionSummary = sections.map((s) => ({
     type: s.sectionType,
@@ -287,10 +176,11 @@ async function runGfoaReview(
 
 async function runAdaReview(
   ctx: EngineContext,
+  docType: DocumentTypeDefinition,
   sections: SectionOutput[]
 ): Promise<AdaReviewResult> {
   const systemPrompt = await buildAgentPrompt(ctx.db, "ada_reviewer", ctx.tenantId);
-  const definition = getAgentDefinition("ada_reviewer");
+  const definition = docType.getAgent("ada_reviewer");
 
   const userPrompt = `Check accessibility for this budget book:\n${JSON.stringify(sections, null, 2)}\n\nOutput format:\n{\n  "pdfIssues": [{"rule": "WCAG X.X.X Name", "severity": "critical|major|minor", "location": "...", "description": "...", "fix": "..."}],\n  "webIssues": [{"rule": "WCAG X.X.X Name", "severity": "critical|major|minor", "location": "...", "description": "...", "fix": "..."}],\n  "passed": true/false\n}`;
 
@@ -315,6 +205,7 @@ async function runAdaReview(
 
 async function reviseSection(
   ctx: EngineContext,
+  docType: DocumentTypeDefinition,
   section: SectionOutput,
   gfoaFeedback: string[],
   adaFeedback: string[],
@@ -322,12 +213,12 @@ async function reviseSection(
   _styleAnalysis: StyleAnalysis | null
 ): Promise<SectionOutput> {
   const systemPrompt = await buildAgentPrompt(ctx.db, "bb_creator", ctx.tenantId);
-  const definition = getAgentDefinition("bb_creator");
+  const definition = docType.getAgent("bb_creator");
 
   // Revision gets a more targeted prompt than initial generation
   const revisionSystemPrompt = `${systemPrompt}\n\nYou are revising an existing section based on reviewer feedback. Make targeted improvements to address the specific issues raised. Maintain the same overall structure and data. Respond with valid JSON in the same format as the original section.`;
 
-  const userPrompt = `Original section:\n${JSON.stringify(section, null, 2)}\n\nGFOA feedback for this section:\n${gfoaFeedback.join("\n")}\n\nADA feedback for this section:\n${adaFeedback.join("\n")}\n\nBudget data context:\n${JSON.stringify(getSectionData(section.sectionType, data), null, 2)}`;
+  const userPrompt = `Original section:\n${JSON.stringify(section, null, 2)}\n\nGFOA feedback for this section:\n${gfoaFeedback.join("\n")}\n\nADA feedback for this section:\n${adaFeedback.join("\n")}\n\nBudget data context:\n${JSON.stringify(docType.getSectionData(section.sectionType, data), null, 2)}`;
 
   const result = await ctx.ai.callJson<SectionOutput>(
     revisionSystemPrompt,
@@ -392,11 +283,13 @@ export async function orchestrateBudgetBookGeneration(
     throw new Error(`Budget book ${budgetBookId} not found`);
   }
 
+  // Look up the document type from the registry
+  const docType = defaultRegistry.get(book.docType ?? "budget_book");
   const fiscalYear = book.fiscalYear ?? new Date().getFullYear();
 
   try {
     // ---- Step 0: Seed global skills (idempotent) ----
-    await seedGlobalSkills(ctx.db);
+    await seedGlobalSkills(ctx.db, docType.seedSkills);
 
     // ---- Step 1: Analyze prior-year PDF ----
     await updateBookStatus(ctx.db, budgetBookId, "analyzing");
@@ -410,8 +303,8 @@ export async function orchestrateBudgetBookGeneration(
     );
 
     let styleAnalysis: StyleAnalysis | null = null;
-    if (book.priorYearPdfS3Key) {
-      styleAnalysis = await analyzePriorYearPdf(
+    if (book.priorYearPdfS3Key && docType.analyzePriorDocument) {
+      styleAnalysis = await docType.analyzePriorDocument(
         ctx.ai,
         ctx.storage,
         ctx.tenantId,
@@ -448,10 +341,10 @@ export async function orchestrateBudgetBookGeneration(
 
     let budgetData: BudgetBookData;
 
-    if (book.dataSource === "upload" && book.uploadedDataS3Key) {
-      // Upload path: parse the Excel file with Claude
+    if (book.dataSource === "upload" && book.uploadedDataS3Key && docType.parseUpload) {
+      // Upload path: parse the Excel file with AI
       const excelBuffer = await ctx.storage.getObject(book.uploadedDataS3Key);
-      budgetData = await parseExcelBudget(ctx.ai, excelBuffer, fiscalYear);
+      budgetData = await docType.parseUpload(ctx.ai, excelBuffer, { fiscalYear }) as BudgetBookData;
     } else if (book.worksheetId) {
       // Module path: query the database
       budgetData = await ctx.data.getBudgetData(
@@ -464,7 +357,7 @@ export async function orchestrateBudgetBookGeneration(
     }
 
     // ---- Step 2.5: Detect data gaps → create todos (but continue) ----
-    const dataGaps = detectDataGaps(budgetData);
+    const dataGaps = docType.detectDataGaps(budgetData);
     if (dataGaps.length > 0) {
       await createTodosFromDataGaps(ctx.db, budgetBookId, ctx.tenantId, dataGaps);
       console.log(
@@ -474,20 +367,13 @@ export async function orchestrateBudgetBookGeneration(
 
     // ---- Step 3: Generate sections (parallel where independent) ----
     const sections: SectionOutput[] = [];
-    const contentSections = SECTION_TYPES.filter(
-      (t) => t !== "cover" && t !== "toc"
-    );
+    const allSectionSpecs = docType.sectionTypes;
+    const contentSpecs = allSectionSpecs.filter((s) => !s.structural);
+    const structuralSpecs = allSectionSpecs.filter((s) => s.structural);
 
-    // Parallel batch: independent sections
-    const parallelSections: SectionType[] = [
-      "revenue_summary",
-      "expenditure_summary",
-      "personnel_summary",
-      "capital_summary",
-    ];
-    const sequentialSections = contentSections.filter(
-      (t) => !parallelSections.includes(t as SectionType)
-    );
+    // Parallel batch: sections marked as parallel
+    const parallelSpecs = contentSpecs.filter((s) => s.parallel);
+    const sequentialSpecs = contentSpecs.filter((s) => !s.parallel);
 
     // Run parallel sections concurrently
     await updateJobStatus(
@@ -500,17 +386,17 @@ export async function orchestrateBudgetBookGeneration(
     );
 
     const parallelResults = await Promise.all(
-      parallelSections.map((st) =>
-        generateSection(ctx, st, budgetData, styleAnalysis)
+      parallelSpecs.map((spec) =>
+        generateSection(ctx, docType, spec.id, budgetData, styleAnalysis)
       )
     );
     sections.push(...parallelResults);
 
     // Run sequential sections (executive summary depends on data sections for context)
-    for (let i = 0; i < sequentialSections.length; i++) {
-      const sectionType = sequentialSections[i] as SectionType;
+    for (let i = 0; i < sequentialSpecs.length; i++) {
+      const spec = sequentialSpecs[i]!;
       const progress = Math.round(
-        50 + ((i + 1) / sequentialSections.length) * 30
+        50 + ((i + 1) / sequentialSpecs.length) * 30
       );
       await updateJobStatus(
         ctx.db,
@@ -518,23 +404,25 @@ export async function orchestrateBudgetBookGeneration(
         "generate_sections",
         "running",
         progress,
-        `Generating ${sectionType.replace(/_/g, " ")}...`
+        `Generating ${spec.id.replace(/_/g, " ")}...`
       );
       const section = await generateSection(
         ctx,
-        sectionType,
+        docType,
+        spec.id,
         budgetData,
         styleAnalysis
       );
       sections.push(section);
     }
 
-    // Generate cover and TOC
-    const [cover, toc] = await Promise.all([
-      generateSection(ctx, "cover", budgetData, styleAnalysis),
-      generateSection(ctx, "toc", budgetData, styleAnalysis),
-    ]);
-    sections.push(cover, toc);
+    // Generate structural sections (cover, toc)
+    const structuralResults = await Promise.all(
+      structuralSpecs.map((spec) =>
+        generateSection(ctx, docType, spec.id, budgetData, styleAnalysis)
+      )
+    );
+    sections.push(...structuralResults);
 
     await updateJobStatus(
       ctx.db,
@@ -566,7 +454,7 @@ export async function orchestrateBudgetBookGeneration(
         documentId: budgetBookId,
         tenantId: ctx.tenantId,
         sectionType: section.sectionType,
-        sectionOrder: SECTION_TYPES.indexOf(section.sectionType),
+        sectionOrder: allSectionSpecs.findIndex((s) => s.id === section.sectionType),
         title: section.title,
         narrativeContent: section.narrativeContent,
         tableData: section.tableData,
@@ -619,8 +507,8 @@ export async function orchestrateBudgetBookGeneration(
       );
 
       const [gfoaResult, adaResult] = await Promise.all([
-        runGfoaReview(ctx, currentSections),
-        runAdaReview(ctx, currentSections),
+        runGfoaReview(ctx, docType, currentSections),
+        runAdaReview(ctx, docType, currentSections),
       ]);
 
       // Save GFOA review (capture the ID for skill extraction + todo linking)
@@ -769,6 +657,7 @@ export async function orchestrateBudgetBookGeneration(
         ) {
           const revised = await reviseSection(
             ctx,
+            docType,
             section,
             gfoaFeedbackForSection,
             adaFeedbackForSection,
@@ -847,18 +736,9 @@ export async function orchestrateBudgetBookGeneration(
       }
     }
 
-    const pdfBuffer = await renderBudgetBookPdf(
-      currentSections as unknown as Array<{
-        sectionType: string;
-        title: string;
-        narrativeContent: string;
-        tableData: Record<string, unknown>[];
-        chartConfigs: Record<string, unknown>[];
-      }>,
-      budgetData,
-      styleAnalysis,
-      chartImages
-    );
+    const pdfBuffer = docType.renderPdf
+      ? await docType.renderPdf(currentSections, budgetData, styleAnalysis, chartImages)
+      : Buffer.from("PDF rendering not supported for this document type");
 
     const pdfKey = `${ctx.tenantId}/budget-books/${budgetBookId}/budget-book-fy${fiscalYear}.pdf`;
     await ctx.storage.upload(pdfKey, pdfBuffer, "application/pdf");
