@@ -11,6 +11,8 @@ import { fetchDataStep } from "../../src/core/pipeline/steps/fetch-data.js";
 import { detectGapsStep } from "../../src/core/pipeline/steps/detect-gaps.js";
 import { generateSectionsStep } from "../../src/core/pipeline/steps/generate-sections.js";
 import { renderChartsStep } from "../../src/core/pipeline/steps/render-charts.js";
+import { renderOutputStep } from "../../src/core/pipeline/steps/render-output.js";
+import { finalizeStep } from "../../src/core/pipeline/steps/finalize.js";
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -323,5 +325,92 @@ describe("renderChartsStep", () => {
     const result = await renderChartsStep.execute(pCtx);
     expect(result.status).toBe("completed");
     expect(pCtx.ctx.db.insert).toHaveBeenCalled();
+  });
+});
+
+// ── render-output ────────────────────────────────────────────────────────
+
+describe("renderOutputStep", () => {
+  it("has correct id", () => {
+    expect(renderOutputStep.id).toBe("render_pdf");
+  });
+
+  it("renders PDF via doc type and uploads", async () => {
+    const pdfBuffer = Buffer.from("mock-pdf");
+    const pCtx = makePipelineCtx({
+      docType: {
+        renderPdf: vi.fn().mockResolvedValue(pdfBuffer),
+      },
+      state: {
+        sections: [
+          {
+            sectionType: "revenue_summary",
+            title: "Revenue",
+            narrativeContent: "...",
+            tableData: [],
+            chartConfigs: [],
+          },
+        ],
+        documentData: {},
+        fiscalYear: 2026,
+      },
+    });
+
+    // Mock the select query for sections
+    const selectChain = {
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          orderBy: vi.fn().mockResolvedValue([]),
+        }),
+      }),
+    };
+    (pCtx.ctx.db as { select: ReturnType<typeof vi.fn> }).select = vi.fn().mockReturnValue(selectChain);
+
+    const result = await renderOutputStep.execute(pCtx);
+    expect(result.status).toBe("completed");
+    expect(pCtx.ctx.storage.upload).toHaveBeenCalled();
+  });
+});
+
+// ── finalize ─────────────────────────────────────────────────────────────
+
+describe("finalizeStep", () => {
+  it("has correct id", () => {
+    expect(finalizeStep.id).toBe("finalize");
+  });
+
+  it("completes with no open todos", async () => {
+    const pCtx = makePipelineCtx();
+
+    // Mock the select query for open todos returning empty
+    const selectChain = {
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue([]),
+        }),
+      }),
+    };
+    (pCtx.ctx.db as { select: ReturnType<typeof vi.fn> }).select = vi.fn().mockReturnValue(selectChain);
+
+    const result = await finalizeStep.execute(pCtx);
+    expect(result.status).toBe("completed");
+    expect(result.message).toContain("complete");
+  });
+
+  it("reports open todos when present", async () => {
+    const pCtx = makePipelineCtx();
+
+    const selectChain = {
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue([{ id: "todo-1" }]),
+        }),
+      }),
+    };
+    (pCtx.ctx.db as { select: ReturnType<typeof vi.fn> }).select = vi.fn().mockReturnValue(selectChain);
+
+    const result = await finalizeStep.execute(pCtx);
+    expect(result.status).toBe("completed");
+    expect(result.message).toContain("action items");
   });
 });
