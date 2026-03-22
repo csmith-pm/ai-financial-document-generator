@@ -1,10 +1,5 @@
 /**
- * Todo Creator — inserts todo records from detected data gaps
- * and GFOA review recommendations.
- *
- * Generic createTodosFromDataGaps stays here.
- * Budget-book-specific createTodosFromGfoaReview is re-exported
- * from doc-types/budget-book/todo-factory.ts.
+ * Todo Creator — inserts todo records from detected data gaps.
  */
 
 import { documentTodos } from "../../db/schema.js";
@@ -33,6 +28,3 @@ export async function createTodosFromDataGaps(
     });
   }
 }
-
-// Re-export budget-book-specific todo creator for backward compatibility
-export { createTodosFromGfoaReview } from "../../doc-types/budget-book/todo-factory.js";

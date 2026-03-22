@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 
 describe("pdfAnalyzer", () => {
   it("exports analyzePriorYearPdf function", async () => {
-    const mod = await import("../../src/core/pdfAnalyzer.js");
+    const mod = await import("../../src/doc-types/budget-book/pdf/analyzer.js");
     expect(mod.analyzePriorYearPdf).toBeTypeOf("function");
   });
 
@@ -15,7 +15,7 @@ describe("pdfAnalyzer", () => {
   });
 
   it("function accepts (ai, storage, tenantId, s3Key) params", async () => {
-    const mod = await import("../../src/core/pdfAnalyzer.js");
+    const mod = await import("../../src/doc-types/budget-book/pdf/analyzer.js");
     expect(mod.analyzePriorYearPdf.length).toBeGreaterThanOrEqual(3);
   });
 });

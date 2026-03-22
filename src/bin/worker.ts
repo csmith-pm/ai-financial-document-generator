@@ -4,15 +4,15 @@
  * Background worker entry point.
  *
  * Connects to Redis, registers BullMQ job handlers, and processes
- * budget book generation jobs asynchronously.
+ * document generation jobs asynchronously.
  */
 
-import { createBudgetBookEngine } from "../index.js";
+import { createDocumentEngine } from "../index.js";
 import { AnthropicAiProvider } from "../providers/anthropic.js";
 import { S3StorageProvider } from "../providers/s3.js";
 import { LocalStorageProvider } from "../providers/local-storage.js";
 import { BullMQQueueProvider } from "../providers/bullmq.js";
-import type { DataProvider, BudgetBookData } from "../core/providers.js";
+import type { DataProvider } from "../core/providers.js";
 
 function requireEnv(name: string): string {
   const value = process.env[name];
@@ -41,12 +41,12 @@ const queue = new BullMQQueueProvider({
 });
 
 const noopDataProvider: DataProvider = {
-  async getBudgetData(): Promise<BudgetBookData> {
+  async getDocumentData(): Promise<unknown> {
     throw new Error("No DataProvider configured. Use the upload path.");
   },
 };
 
-const engine = createBudgetBookEngine({
+const engine = createDocumentEngine({
   connectionString: requireEnv("DATABASE_URL"),
   ai,
   storage,
@@ -59,7 +59,7 @@ const engine = createBudgetBookEngine({
 
 engine.startWorker();
 
-console.log("Budget Book Engine worker started, waiting for jobs...");
+console.log("Document Engine worker started, waiting for jobs...");
 
 for (const signal of ["SIGINT", "SIGTERM"] as const) {
   process.on(signal, async () => {

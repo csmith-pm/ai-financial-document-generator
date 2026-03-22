@@ -60,7 +60,7 @@ function makeMockCtx(): EngineContext {
       getSignedUrl: vi.fn().mockResolvedValue("https://signed.url"),
     } as unknown as EngineContext["storage"],
     data: {
-      getBudgetData: vi.fn().mockResolvedValue({ revenueDetail: [] }),
+      getDocumentData: vi.fn().mockResolvedValue({ revenueDetail: [] }),
     } as unknown as EngineContext["data"],
     tenantId: "test-tenant",
     config: {
@@ -169,12 +169,13 @@ describe("fetchDataStep", () => {
         fiscalYear: 2026,
       },
     });
-    (pCtx.ctx.data.getBudgetData as ReturnType<typeof vi.fn>).mockResolvedValue(mockData);
+    (pCtx.ctx.data.getDocumentData as ReturnType<typeof vi.fn>).mockResolvedValue(mockData);
 
     const result = await fetchDataStep.execute(pCtx);
     expect(result.status).toBe("completed");
     expect(pCtx.state.documentData).toEqual(mockData);
-    expect(pCtx.ctx.data.getBudgetData).toHaveBeenCalledWith(
+    expect(pCtx.ctx.data.getDocumentData).toHaveBeenCalledWith(
+      "test_doc",
       "test-tenant",
       "ws-1",
       2026

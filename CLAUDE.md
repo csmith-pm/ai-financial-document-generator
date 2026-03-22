@@ -1,6 +1,6 @@
-# Budget Book Engine
+# Document Engine
 
-Standalone multi-agent document generation engine for GFOA-compliant municipal budget books. Rebuilt from a ClearGov monorepo extraction into a fully decoupled, provider-based architecture.
+Standalone multi-agent document generation engine with pluggable document types. Built as a fully decoupled, provider-based architecture that ships with budget-book and PAFR as registered document types.
 
 ## Development Process
 
@@ -14,11 +14,23 @@ Always follow the development process documented in [dev_process.md](./dev_proce
 
 ## Architecture
 
+### Document Type System
+Document types are self-contained modules registered at startup via `DocumentTypeDefinition<T>` interface (`src/core/doc-type.ts`):
+- `id`, `name`, `version` — identity
+- `dataSchema` — Zod schema for runtime validation
+- `sectionTypes` — section specs with parallelism flags
+- `agents` — AI agent definitions (creator, reviewer, advisor)
+- `reviewers` — reviewer specs with custom prompt builders
+- `seedSkills`, `categoryPriority` — skill system config
+- `detectDataGaps()`, `parseUpload()`, `renderPdf()`, `analyzePriorDocument()` — doc-type-specific logic
+
+Registry pattern in `src/core/doc-type-registry.ts`: `register()`, `get(id)`, `has(id)`, `list()`.
+
 ### Provider Pattern
 All infrastructure is abstracted behind provider interfaces defined in `src/core/providers.ts`:
 - **AiProvider** — `callText()`, `callJson<T>()`, `callVision()`, `logUsage?()`
 - **StorageProvider** — `upload()`, `getObject()`, `getSignedUrl()`
-- **DataProvider** — `getBudgetData()` (returns flat `BudgetBookData`)
+- **DataProvider** — `getDocumentData(docTypeId, tenantId, worksheetId, fiscalYear)`
 - **QueueProvider** — `enqueue()`, `process()`
 
 Implementations: `AnthropicAiProvider`, `S3StorageProvider`, `LocalStorageProvider`, `ExcelDataProvider`, `BullMQQueueProvider`
@@ -29,48 +41,47 @@ Internal context object passed through the orchestration pipeline (`src/core/con
 { db: DrizzleInstance, ai: AiProvider, storage: StorageProvider, data: DataProvider, tenantId: string, config: { maxIterations, chartsEnabled, defaultModel } }
 ```
 
-### Multi-Agent System
-4 AI agents with distinct roles, defined in `src/core/agents/definitions.ts`:
-- **BB_Creator** (t=0.4) — Generates section content
-- **BB_Reviewer** (t=0.2) — GFOA compliance scoring (180-point scale)
-- **ADA_Reviewer** (t=0.1) — WCAG 2.1 AA accessibility checks
-- **BB_Advisor** (t=0.5) — Todo chat advisor
+### Pipeline System
+Generic 9-step pipeline (`src/core/pipeline/`) that works with any registered document type:
+1. Seed global skills (idempotent)
+2. Analyze prior document for style
+3. Fetch/parse document data
+4. Detect data gaps → create todos
+5. Generate sections (parallel/sequential/structural)
+6. Render charts (Puppeteer + Recharts)
+7. Review and iterate (loop with revision + plateau detection)
+8. Render final output (PDF)
+9. Finalize (set status based on open todos)
 
 ### Self-Improving Skill System
 Skills are extracted from reviews and injected into agent prompts (`src/core/skills/`):
 - Max 15 skills per prompt, max 30 per agent+tenant
-- Priority hierarchy: ADA > GFOA > formatting
+- Priority hierarchy configurable per doc type
 - Customer-scoped skills override global seeds
-
-### Orchestration Flow (`src/core/orchestrator.ts`)
-1. Seed global skills (idempotent)
-2. Analyze prior-year PDF for style
-3. Fetch budget data + detect data gaps (create todos)
-4. Generate sections (parallel where independent)
-5. Render charts (Puppeteer + Recharts)
-6. GFOA + ADA review in parallel
-7. Extract skills from reviews
-8. Create quality todos from first GFOA review
-9. Revise with plateau detection (stop if score doesn't improve by >2 points)
-10. Render final PDF (@react-pdf/renderer)
-11. Set status based on open todos
 
 ### Key Naming Conventions
 - `tenantId` (not `customerId`) — used throughout schema and code
-- `BudgetBookData` uses flat arrays: `revenueDetail`, `expenditureByDepartment`, `personnelDetail`, `capitalProjects`, `multiYearProjections` (not nested objects)
+- `docType` is required on all documents — no defaults
 - Database schema is engine-owned in `src/db/schema.ts` (Drizzle ORM, no external FK references)
 
 ## Project Structure
 
-- `src/core/` — Core business logic (orchestrator, agents, skills, todos, parsers, PDF rendering)
-- `src/core/types.ts` — Shared types (e.g., `StyleAnalysis`) used across multiple modules
+- `src/core/` — Core engine logic (orchestrator, pipeline, skills, todos, doc-type registry)
+- `src/core/pipeline/` — Generic pipeline steps
+- `src/core/skills/` — Skill arbitration, pruning, seeding
+- `src/core/agents/` — Prompt builder (agent definitions live in doc types)
+- `src/doc-types/` — Pluggable document type implementations
+  - `budget-book/` — GFOA-compliant municipal budget books
+  - `pafr/` — Popular Annual Financial Reports
+  - `shared/` — Shared components (e.g., ADA reviewer)
 - `src/db/` — Drizzle ORM schema and connection (engine-owned, uses `tenantId`)
 - `src/providers/` — Provider implementations (Anthropic AI, S3, local storage, BullMQ, Excel data)
 - `src/api/` — Fastify REST API (routes, validation, auth middleware)
 - `src/api/middleware/auth.ts` — Extracts `tenantId`/`userId` from `x-tenant-id`/`x-user-id` headers
 - `src/worker/` — BullMQ worker for async job processing
-- `src/index.ts` — `createBudgetBookEngine()` factory and re-exports
-- `tests/` — Milestone-organized test suites (27 files, 150 tests)
+- `src/workbench/` — Dev-only CLI and routes for agent training
+- `src/index.ts` — `createDocumentEngine()` factory and re-exports
+- `tests/` — Milestone-organized test suites
 - `tests/fixtures/` — Mock providers, sample data, sample review results
 - `reference/` — Agent and skill specification documents
 
@@ -86,23 +97,23 @@ pnpm build         # Compile TypeScript
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| POST | `/api/books` | Create book |
-| GET | `/api/books` | List books |
-| GET | `/api/books/:id` | Get book |
-| DELETE | `/api/books/:id` | Delete book |
-| POST | `/api/books/:id/budget-file` | Upload Excel |
-| POST | `/api/books/:id/prior-year-pdf` | Upload prior PDF |
-| POST | `/api/books/:id/generate` | Start generation |
-| POST | `/api/books/:id/regenerate` | Regenerate |
-| GET | `/api/books/:id/progress` | Job progress |
-| GET | `/api/books/:id/preview` | Web preview |
-| GET | `/api/books/:id/pdf` | Download PDF |
-| GET | `/api/books/:id/reviews` | Get reviews |
-| GET | `/api/books/:bookId/todos` | List todos |
-| GET | `/api/todos/:id` | Todo + messages |
-| POST | `/api/todos/:id/messages` | Chat with advisor |
-| POST | `/api/todos/:id/files` | Upload attachment |
-| PATCH | `/api/todos/:id/status` | Update status |
+| POST | `/api/documents` | Create document |
+| GET | `/api/documents` | List documents |
+| GET | `/api/documents/:id` | Get document |
+| DELETE | `/api/documents/:id` | Delete document |
+| POST | `/api/documents/:id/data-file` | Upload data file |
+| POST | `/api/documents/:id/prior-document` | Upload prior document |
+| POST | `/api/documents/:id/generate` | Start generation |
+| POST | `/api/documents/:id/regenerate` | Regenerate |
+| GET | `/api/documents/:id/progress` | Job progress |
+| GET | `/api/documents/:id/preview` | Web preview |
+| GET | `/api/documents/:id/pdf` | Download PDF |
+| GET | `/api/documents/:id/reviews` | Get reviews |
+| GET | `/api/documents/:id/todos` | List todos |
+| GET | `/api/documents/todos/:id` | Todo + messages |
+| POST | `/api/documents/todos/:id/messages` | Chat with advisor |
+| POST | `/api/documents/todos/:id/files` | Upload attachment |
+| PATCH | `/api/documents/todos/:id/status` | Update status |
 | GET | `/health` | Health check |
 
 ## Dependencies

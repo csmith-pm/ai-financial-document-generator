@@ -2,19 +2,19 @@ import { describe, it, expect } from "vitest";
 
 describe("excelParser", () => {
   it("exports parseExcelBudget function", async () => {
-    const mod = await import("../../src/core/excelParser.js");
+    const mod = await import("../../src/doc-types/budget-book/excel-parser.js");
     expect(mod.parseExcelBudget).toBeTypeOf("function");
   });
 
   it("function accepts (ai, buffer, fiscalYear) params", async () => {
-    const mod = await import("../../src/core/excelParser.js");
+    const mod = await import("../../src/doc-types/budget-book/excel-parser.js");
     // Verify the function exists and has expected arity (3 params)
     expect(mod.parseExcelBudget.length).toBe(3);
   });
 });
 
 describe("ExcelDataProvider integration", () => {
-  it("ExcelDataProvider.getBudgetData calls parseExcelBudget", async () => {
+  it("ExcelDataProvider.getDocumentData calls parseExcelBudget", async () => {
     const { ExcelDataProvider } = await import("../../src/providers/excel-data.js");
     const { MockAiProvider, MockStorageProvider } = await import("../fixtures/mock-providers.js");
 
@@ -30,7 +30,7 @@ describe("ExcelDataProvider integration", () => {
 
     // The actual parse will fail because the buffer isn't valid Excel,
     // but we verify the wiring works (it calls storage.getObject)
-    await expect(provider.getBudgetData("t1", "ws1", 2026)).rejects.toThrow();
+    await expect(provider.getDocumentData("budget_book", "t1", "ws1", 2026)).rejects.toThrow();
     expect(storage.calls.some(c => c.method === "getObject")).toBe(true);
   });
 });

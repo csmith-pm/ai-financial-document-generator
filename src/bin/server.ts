@@ -7,12 +7,12 @@
  * and starts the Fastify HTTP server.
  */
 
-import { createBudgetBookEngine } from "../index.js";
+import { createDocumentEngine } from "../index.js";
 import { AnthropicAiProvider } from "../providers/anthropic.js";
 import { S3StorageProvider } from "../providers/s3.js";
 import { LocalStorageProvider } from "../providers/local-storage.js";
 import { BullMQQueueProvider } from "../providers/bullmq.js";
-import type { DataProvider, BudgetBookData } from "../core/providers.js";
+import type { DataProvider } from "../core/providers.js";
 
 function requireEnv(name: string): string {
   const value = process.env[name];
@@ -46,9 +46,9 @@ const queue = new BullMQQueueProvider({
 // via upload parsing or the DataProvider passed at generation time.
 // For standalone mode, generation always uses the "upload" path.
 const noopDataProvider: DataProvider = {
-  async getBudgetData(): Promise<BudgetBookData> {
+  async getDocumentData(): Promise<unknown> {
     throw new Error(
-      "No DataProvider configured. Use the upload path (POST /api/books/:id/budget-file) or provide a DataProvider implementation."
+      "No DataProvider configured. Use the upload path (POST /api/documents/:id/data-file) or provide a DataProvider implementation."
     );
   },
 };
@@ -57,7 +57,7 @@ const noopDataProvider: DataProvider = {
 
 const port = parseInt(process.env.PORT ?? "4000", 10);
 
-const engine = createBudgetBookEngine({
+const engine = createDocumentEngine({
   connectionString: requireEnv("DATABASE_URL"),
   ai,
   storage,
@@ -75,7 +75,7 @@ engine.startWorker();
 
 const app = await engine.startServer(port);
 
-console.log(`Budget Book Engine API listening on port ${port}`);
+console.log(`Document Engine API listening on port ${port}`);
 
 // Graceful shutdown
 for (const signal of ["SIGINT", "SIGTERM"] as const) {

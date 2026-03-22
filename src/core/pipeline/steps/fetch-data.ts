@@ -39,7 +39,8 @@ export const fetchDataStep: PipelineStep = {
         fiscalYear: state.fiscalYear,
       });
     } else if (worksheetId) {
-      state.documentData = await ctx.data.getBudgetData(
+      state.documentData = await ctx.data.getDocumentData(
+        docType.id,
         ctx.tenantId,
         worksheetId,
         state.fiscalYear

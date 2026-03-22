@@ -1,7 +1,7 @@
 {
-  "name": "@docgen/budget-book-engine",
-  "version": "1.0.0",
-  "description": "Self-improving agentic document generation engine for municipal budget books",
+  "name": "@docgen/document-engine",
+  "version": "2.0.0",
+  "description": "Self-improving agentic document generation engine with pluggable document types",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

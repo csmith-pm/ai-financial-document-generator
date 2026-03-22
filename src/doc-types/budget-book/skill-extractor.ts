@@ -1,14 +1,13 @@
 /**
- * Skill Extractor — extracts learnings from reviews as structured skills.
- *
- * After each GFOA or ADA review, calls the AI provider to extract 3-5
- * actionable learnings that become skills for the target agent(s).
+ * Budget Book Skill Extractor — extracts learnings from GFOA and ADA reviews
+ * as structured skills for budget book agents.
  */
 
-import { type AiProvider } from "../providers.js";
+import { type AiProvider } from "../../core/providers.js";
 import { type DrizzleInstance } from "../../db/connection.js";
-import { negotiateSkill } from "./arbitration.js";
-import { pruneSkills } from "./pruning.js";
+import { negotiateSkill } from "../../core/skills/arbitration.js";
+import { pruneSkills } from "../../core/skills/pruning.js";
+import type { GfoaReviewResult, AdaReviewResult } from "./review-types.js";
 
 interface ExtractedSkill {
   targetAgent: string;
@@ -22,42 +21,7 @@ interface ExtractionResult {
   learnings: ExtractedSkill[];
 }
 
-interface GfoaReviewResult {
-  scores: Array<{
-    category: string;
-    maxPoints: number;
-    awardedPoints: number;
-    feedback: string;
-  }>;
-  totalScore: number;
-  passed: boolean;
-  recommendations: Array<{
-    section: string;
-    priority: string;
-    issue: string;
-    suggestion: string;
-  }>;
-}
-
-interface AdaReviewResult {
-  pdfIssues: Array<{
-    rule: string;
-    severity: string;
-    location: string;
-    description: string;
-    fix: string;
-  }>;
-  webIssues: Array<{
-    rule: string;
-    severity: string;
-    location: string;
-    description: string;
-    fix: string;
-  }>;
-  passed: boolean;
-}
-
-const EXTRACTION_SYSTEM_PROMPT = `You are a learning extraction agent. Given review results, extract 3-5 actionable learnings that would improve future budget book generation.
+const EXTRACTION_SYSTEM_PROMPT = `You are a learning extraction agent. Given review results, extract 3-5 actionable learnings that would improve future document generation.
 
 Each learning must be:
 - Specific and prescriptive (not vague guidance)
@@ -87,7 +51,6 @@ export async function extractSkillsFromGfoaReview(
   review: GfoaReviewResult,
   reviewId: string
 ): Promise<void> {
-  // Only extract from reviews with actionable feedback
   if (review.recommendations.length === 0) return;
 
   const userPrompt = `GFOA Review Results:
@@ -96,7 +59,7 @@ export async function extractSkillsFromGfoaReview(
 - Recommendations (${review.recommendations.length} total):
 ${review.recommendations.map((r) => `  [${r.priority}] ${r.section}: ${r.issue} → ${r.suggestion}`).join("\n")}
 
-Extract learnings that would help the BB_Creator agent produce higher-scoring content next time. Also extract any self-improvement learnings for the BB_Reviewer itself (e.g., criteria it should check more carefully).`;
+Extract learnings that would help the content creator agent produce higher-scoring content next time. Also extract any self-improvement learnings for the reviewer itself (e.g., criteria it should check more carefully).`;
 
   const result = await ai.callJson<ExtractionResult>(
     EXTRACTION_SYSTEM_PROMPT,
@@ -112,7 +75,6 @@ Extract learnings that would help the BB_Creator agent produce higher-scoring co
     result.model
   );
 
-  // Process each extracted learning through arbitration
   for (const learning of result.data.learnings) {
     await negotiateSkill(db, tenantId, {
       agentType: learning.targetAgent,
@@ -124,7 +86,6 @@ Extract learnings that would help the BB_Creator agent produce higher-scoring co
     });
   }
 
-  // Prune if needed
   await pruneSkills(db, "bb_creator", tenantId);
   await pruneSkills(db, "bb_reviewer", tenantId);
 }
@@ -149,7 +110,7 @@ ${review.pdfIssues.map((i) => `  [${i.severity}] ${i.rule}: ${i.description} →
 - Web Issues (${review.webIssues.length}):
 ${review.webIssues.map((i) => `  [${i.severity}] ${i.rule}: ${i.description} → ${i.fix}`).join("\n")}
 
-Extract learnings that would help the BB_Creator agent produce more accessible content. Also extract self-improvement learnings for the ADA_Reviewer (patterns to check more carefully).`;
+Extract learnings that would help the content creator agent produce more accessible content. Also extract self-improvement learnings for the accessibility reviewer (patterns to check more carefully).`;
 
   const result = await ai.callJson<ExtractionResult>(
     EXTRACTION_SYSTEM_PROMPT,

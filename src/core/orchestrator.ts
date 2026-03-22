@@ -15,8 +15,6 @@
  * 8. Render final output (PDF)
  * 9. Finalize (set status based on open todos)
  *
- * Backward-compatible: orchestrateBudgetBookGeneration and
- * resumeBudgetBookGeneration are thin wrappers over the generic functions.
  */
 
 import { eq } from "drizzle-orm";
@@ -54,7 +52,10 @@ export async function orchestrateDocumentGeneration(
   }
 
   // Resolve document type from registry
-  const docType = defaultRegistry.get(doc.docType ?? "budget_book");
+  if (!doc.docType) {
+    throw new Error(`Document ${documentId} has no docType set`);
+  }
+  const docType = defaultRegistry.get(doc.docType);
   const fiscalYear = doc.fiscalYear ?? new Date().getFullYear();
 
   // Run the default pipeline
@@ -124,17 +125,3 @@ export async function resumeDocumentGeneration(
   // Run full generation again (with updated data + accumulated skills)
   await orchestrateDocumentGeneration(ctx, documentId);
 }
-
-// ─── Backward-Compatible Aliases ─────────────────────────────────────────
-
-/**
- * @deprecated Use orchestrateDocumentGeneration instead.
- * Kept for backward compatibility.
- */
-export const orchestrateBudgetBookGeneration = orchestrateDocumentGeneration;
-
-/**
- * @deprecated Use resumeDocumentGeneration instead.
- * Kept for backward compatibility.
- */
-export const resumeBudgetBookGeneration = resumeDocumentGeneration;

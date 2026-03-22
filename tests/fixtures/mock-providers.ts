@@ -7,7 +7,6 @@ import type {
   StorageProvider,
   DataProvider,
   QueueProvider,
-  BudgetBookData,
 } from "../../src/core/providers.js";
 import { sampleBudgetData } from "./sample-budget-data.js";
 
@@ -97,18 +96,19 @@ export class MockStorageProvider implements StorageProvider {
 }
 
 /**
- * Mock DataProvider that returns sample budget data.
+ * Mock DataProvider that returns sample document data.
  */
 export class MockDataProvider implements DataProvider {
   calls: Array<{ method: string; args: unknown[] }> = [];
-  data: BudgetBookData = sampleBudgetData;
+  data: unknown = sampleBudgetData;
 
-  async getBudgetData(
+  async getDocumentData(
+    docTypeId: string,
     tenantId: string,
     worksheetId: string,
     fiscalYear: number
-  ): Promise<BudgetBookData> {
-    this.calls.push({ method: "getBudgetData", args: [tenantId, worksheetId, fiscalYear] });
+  ): Promise<unknown> {
+    this.calls.push({ method: "getDocumentData", args: [docTypeId, tenantId, worksheetId, fiscalYear] });
     return this.data;
   }
 }

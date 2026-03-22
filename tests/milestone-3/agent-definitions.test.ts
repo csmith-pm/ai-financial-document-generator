@@ -3,9 +3,9 @@ import {
   AGENT_TYPES,
   AGENT_DEFINITIONS,
   getAgentDefinition,
-} from "../../src/core/agents/index.js";
+} from "../../src/doc-types/budget-book/agents.js";
 
-describe("Agent Definitions", () => {
+describe("Budget Book Agent Definitions", () => {
   it("exports all 4 agent types", () => {
     expect(AGENT_TYPES).toHaveLength(4);
     expect(AGENT_TYPES).toContain("bb_creator");

@@ -42,7 +42,10 @@ export async function handleTodoChat(
     .limit(1);
 
   // Resolve the doc type to get the advisor agent
-  const docType = defaultRegistry.get(doc?.docType ?? "budget_book");
+  if (!doc?.docType) {
+    throw new Error(`Document for todo ${todoId} has no docType set`);
+  }
+  const docType = defaultRegistry.get(doc.docType);
   const advisorAgent = docType.getAgent(docType.advisorAgentType);
 
   // Load prior conversation messages (most recent N)

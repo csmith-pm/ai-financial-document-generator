@@ -6,14 +6,13 @@ describe("todos/creator", () => {
     expect(mod.createTodosFromDataGaps).toBeTypeOf("function");
   });
 
-  it("exports createTodosFromGfoaReview function", async () => {
+  it("does not export budget-book-specific createTodosFromGfoaReview", async () => {
     const mod = await import("../../src/core/todos/creator.js");
-    expect(mod.createTodosFromGfoaReview).toBeTypeOf("function");
+    expect((mod as any).createTodosFromGfoaReview).toBeUndefined();
   });
 
-  it("both are re-exported from todos/index", async () => {
+  it("createTodosFromDataGaps is re-exported from todos/index", async () => {
     const mod = await import("../../src/core/todos/index.js");
     expect(mod.createTodosFromDataGaps).toBeTypeOf("function");
-    expect(mod.createTodosFromGfoaReview).toBeTypeOf("function");
   });
 });

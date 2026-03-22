@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { detectDataGaps } from "../../src/core/todos/detector.js";
+import { detectDataGaps } from "../../src/doc-types/budget-book/detector.js";
 import { sampleBudgetData, sparseBudgetData } from "../fixtures/sample-budget-data.js";
-import type { BudgetBookData } from "../../src/core/providers.js";
+import type { BudgetBookData } from "../../src/doc-types/budget-book/data-types.js";
 
 describe("detectDataGaps", () => {
   it("returns no gaps for complete data", () => {

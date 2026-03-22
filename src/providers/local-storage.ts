@@ -2,7 +2,7 @@ import { writeFile, readFile, mkdir } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import type { StorageProvider } from "../core/providers.js";
 
-const DEFAULT_BASE_DIR = "/tmp/budget-book-engine";
+const DEFAULT_BASE_DIR = "/tmp/document-engine";
 
 export interface LocalStorageProviderConfig {
   baseDir?: string;

@@ -1,16 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-describe("Backward compatibility: orchestrator exports", () => {
-  it("exports orchestrateBudgetBookGeneration from core/orchestrator", async () => {
-    const mod = await import("../../src/core/orchestrator.js");
-    expect(typeof mod.orchestrateBudgetBookGeneration).toBe("function");
-  });
-
-  it("exports resumeBudgetBookGeneration from core/orchestrator", async () => {
-    const mod = await import("../../src/core/orchestrator.js");
-    expect(typeof mod.resumeBudgetBookGeneration).toBe("function");
-  });
-
+describe("Core exports: orchestrator", () => {
   it("exports orchestrateDocumentGeneration from core/orchestrator", async () => {
     const mod = await import("../../src/core/orchestrator.js");
     expect(typeof mod.orchestrateDocumentGeneration).toBe("function");
@@ -20,19 +10,9 @@ describe("Backward compatibility: orchestrator exports", () => {
     const mod = await import("../../src/core/orchestrator.js");
     expect(typeof mod.resumeDocumentGeneration).toBe("function");
   });
-
-  it("backward-compat aliases point to the same function", async () => {
-    const mod = await import("../../src/core/orchestrator.js");
-    expect(mod.orchestrateBudgetBookGeneration).toBe(
-      mod.orchestrateDocumentGeneration
-    );
-    expect(mod.resumeBudgetBookGeneration).toBe(
-      mod.resumeDocumentGeneration
-    );
-  });
 });
 
-describe("Backward compatibility: index.ts exports", () => {
+describe("Core exports: index.ts", () => {
   it("exports orchestrateDocumentGeneration from index", async () => {
     const mod = await import("../../src/index.js");
     expect(typeof mod.orchestrateDocumentGeneration).toBe("function");
@@ -66,7 +46,7 @@ describe("Backward compatibility: index.ts exports", () => {
   });
 });
 
-describe("Backward compatibility: pipeline step exports", () => {
+describe("Core exports: pipeline steps", () => {
   it("exports all steps from pipeline/index", async () => {
     const mod = await import("../../src/core/pipeline/index.js");
     expect(typeof mod.seedSkillsStep).toBe("object");

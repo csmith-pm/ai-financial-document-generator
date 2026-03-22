@@ -150,7 +150,7 @@ export async function documentRoutes(
       return;
     }
 
-    const docType = defaultRegistry.get(doc.docType ?? "budget_book");
+    const docType = defaultRegistry.get(doc.docType!);
     const buffer = await data.toBuffer();
     const s3Key = `${tenantId}/${docType.storagePrefix}/${id}/data-file${getExtension(data.filename)}`;
     await storage.upload(s3Key, buffer, data.mimetype);
@@ -189,7 +189,7 @@ export async function documentRoutes(
       return;
     }
 
-    const docType = defaultRegistry.get(doc.docType ?? "budget_book");
+    const docType = defaultRegistry.get(doc.docType!);
     const buffer = await data.toBuffer();
     const s3Key = `${tenantId}/${docType.storagePrefix}/${id}/prior-document.pdf`;
     await storage.upload(s3Key, buffer, "application/pdf");

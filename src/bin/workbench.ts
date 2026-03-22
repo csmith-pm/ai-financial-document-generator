@@ -12,7 +12,7 @@ import { AnthropicAiProvider } from "../providers/anthropic.js";
 import { S3StorageProvider } from "../providers/s3.js";
 import { LocalStorageProvider } from "../providers/local-storage.js";
 import { BullMQQueueProvider } from "../providers/bullmq.js";
-import type { DataProvider, BudgetBookData } from "../core/providers.js";
+import type { DataProvider } from "../core/providers.js";
 
 function requireEnv(name: string): string {
   const value = process.env[name];
@@ -41,7 +41,7 @@ const queue = new BullMQQueueProvider({
 });
 
 const noopDataProvider: DataProvider = {
-  async getBudgetData(): Promise<BudgetBookData> {
+  async getDocumentData(): Promise<unknown> {
     throw new Error("No DataProvider configured. Use the upload path.");
   },
 };

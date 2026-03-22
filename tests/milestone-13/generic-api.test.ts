@@ -35,14 +35,25 @@ describe("generic validation schemas", () => {
   it("createDocumentSchema accepts valid input", async () => {
     const { createDocumentSchema } = await import("../../src/api/validation.js");
     const result = createDocumentSchema.parse({
+      docType: "budget_book",
       title: "FY2026 Budget Book",
       fiscalYear: 2026,
     });
     expect(result.title).toBe("FY2026 Budget Book");
     expect(result.fiscalYear).toBe(2026);
-    expect(result.docType).toBe("budget_book"); // default
+    expect(result.docType).toBe("budget_book");
     expect(result.dataSource).toBe("module"); // default
     expect(result.maxIterations).toBe(3); // default
+  });
+
+  it("createDocumentSchema rejects missing docType", async () => {
+    const { createDocumentSchema } = await import("../../src/api/validation.js");
+    expect(() =>
+      createDocumentSchema.parse({
+        title: "FY2026 Budget Book",
+        fiscalYear: 2026,
+      })
+    ).toThrow();
   });
 
   it("createDocumentSchema accepts custom docType", async () => {

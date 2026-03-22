@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest";
 
-describe("createBudgetBookEngine", () => {
-  it("exports createBudgetBookEngine function", async () => {
+describe("createDocumentEngine", () => {
+  it("exports createDocumentEngine function", async () => {
     const mod = await import("../../src/index.js");
-    expect(mod.createBudgetBookEngine).toBeTypeOf("function");
+    expect(mod.createDocumentEngine).toBeTypeOf("function");
   });
 
   it("re-exports AnthropicAiProvider", async () => {

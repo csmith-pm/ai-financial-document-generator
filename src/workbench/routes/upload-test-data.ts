@@ -25,9 +25,12 @@ export async function uploadTestDataRoutes(
       return;
     }
 
-    // Doc type from query parameter, default to budget_book
-    const docTypeId =
-      (request.query as Record<string, string>).docType ?? "budget_book";
+    // Doc type from query parameter (required)
+    const docTypeId = (request.query as Record<string, string>).docType;
+    if (!docTypeId) {
+      reply.status(400).send({ error: "Missing required query parameter: docType" });
+      return;
+    }
 
     if (!defaultRegistry.has(docTypeId)) {
       reply.status(400).send({ error: `Unknown document type: "${docTypeId}"` });

@@ -1,7 +1,7 @@
 import { Queue, Worker } from "bullmq";
 import type { QueueProvider } from "../core/providers.js";
 
-const DEFAULT_QUEUE_NAME = "budget-book-generation";
+const DEFAULT_QUEUE_NAME = "document-generation";
 
 export interface BullMQQueueProviderConfig {
   redisUrl: string;

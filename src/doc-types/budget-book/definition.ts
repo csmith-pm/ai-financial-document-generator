@@ -30,7 +30,7 @@ import { parseExcelBudget } from "./excel-parser.js";
 import {
   extractSkillsFromGfoaReview,
   extractSkillsFromAdaReview,
-} from "../../core/skills/extractor.js";
+} from "./skill-extractor.js";
 import { createTodosFromGfoaReview } from "./todo-factory.js";
 import type { GfoaReviewResult, AdaReviewResult } from "./review-types.js";
 

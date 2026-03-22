@@ -3,7 +3,7 @@
  *
  * These are the abstraction seams that decouple the orchestration engine
  * from any specific infrastructure. Implement these interfaces to plug
- * the budget book engine into any application.
+ * the document engine into any application.
  */
 
 // ─── AI Provider ────────────────────────────────────────────────────────────
@@ -81,33 +81,20 @@ export interface StorageProvider {
 
 // ─── Data Provider ──────────────────────────────────────────────────────────
 
-// BudgetBookData types — canonical definitions live in doc-types/budget-book/data-types.ts
-export type {
-  RevenueDetailRow,
-  ExpenditureByDepartmentRow,
-  PersonnelDetailRow,
-  CapitalProjectDetail,
-  ProjectionYear,
-  CommunityProfile,
-  BudgetBookData,
-} from "../doc-types/budget-book/data-types.js";
-
-// Re-import for use in DataProvider below
-import type { BudgetBookData } from "../doc-types/budget-book/data-types.js";
-
 export interface DataProvider {
-  /** Fetch structured budget data from whatever source system the host app uses */
-  getBudgetData(
+  /** Fetch structured document data from whatever source system the host app uses */
+  getDocumentData(
+    docTypeId: string,
     tenantId: string,
     worksheetId: string,
     fiscalYear: number
-  ): Promise<BudgetBookData>;
+  ): Promise<unknown>;
 }
 
 // ─── Queue Provider (optional, for async generation) ────────────────────────
 
 export interface QueueProvider {
-  /** Enqueue a budget book generation job */
+  /** Enqueue a document generation job */
   enqueue(
     jobType: string,
     payload: Record<string, unknown>

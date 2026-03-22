@@ -26,7 +26,7 @@ describe("worker", () => {
     const processedJobTypes = queue.calls
       .filter((c) => c.method === "process")
       .map((c) => c.args[0]);
-    expect(processedJobTypes).toContain("generate-budget-book");
-    expect(processedJobTypes).toContain("regenerate-budget-book");
+    expect(processedJobTypes).toContain("generate-document");
+    expect(processedJobTypes).toContain("regenerate-document");
   });
 });

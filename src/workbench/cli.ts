@@ -34,7 +34,7 @@ function parseCliArgs(): ParsedArgs {
 
   if (values.help || positionals.length === 0) {
     console.log(`
-Budget Book Engine — Workbench CLI
+Document Engine — Workbench CLI
 
 Commands:
   doc-types                       List registered document types

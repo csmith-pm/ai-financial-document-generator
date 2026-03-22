@@ -108,12 +108,12 @@ describe("Provider Interfaces", () => {
   describe("DataProvider", () => {
     it("MockDataProvider satisfies the DataProvider interface", () => {
       const data: DataProvider = new MockDataProvider();
-      expect(data.getBudgetData).toBeTypeOf("function");
+      expect(data.getDocumentData).toBeTypeOf("function");
     });
 
-    it("returns BudgetBookData with all required fields", async () => {
+    it("returns document data with expected fields", async () => {
       const data = new MockDataProvider();
-      const result = await data.getBudgetData("tenant-1", "ws-1", 2026);
+      const result = await data.getDocumentData("budget_book", "tenant-1", "ws-1", 2026) as Record<string, unknown>;
       expect(result).toHaveProperty("fiscalYear", 2026);
       expect(result).toHaveProperty("communityProfile");
       expect(result).toHaveProperty("revenueDetail");

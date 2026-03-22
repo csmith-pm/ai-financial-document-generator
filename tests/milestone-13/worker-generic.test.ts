@@ -19,7 +19,7 @@ describe("worker registers generic job handlers", () => {
     expect(handlers.has("regenerate-document")).toBe(true);
   });
 
-  it("registers backward-compatible job handlers", async () => {
+  it("only registers generic job handlers (no legacy names)", async () => {
     const { startWorker } = await import("../../src/worker/index.js");
 
     const handlers = new Map<string, Function>();
@@ -33,11 +33,9 @@ describe("worker registers generic job handlers", () => {
 
     startWorker({ queue: mockQueue, createContext: mockCreateContext });
 
-    // Legacy names still registered
-    expect(handlers.has("generate-budget-book")).toBe(true);
-    expect(handlers.has("regenerate-budget-book")).toBe(true);
-
-    // Total: 4 handlers (2 generic + 2 legacy)
-    expect(handlers.size).toBe(4);
+    // Only generic handlers — no legacy budget-book names
+    expect(handlers.has("generate-budget-book")).toBe(false);
+    expect(handlers.has("regenerate-budget-book")).toBe(false);
+    expect(handlers.size).toBe(2);
   });
 });

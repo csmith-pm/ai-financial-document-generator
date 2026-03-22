@@ -21,7 +21,6 @@ import "./doc-types/index.js";
 // Re-export core types for consumers
 export type { AiProvider, StorageProvider, DataProvider, QueueProvider, EngineConfig } from "./core/providers.js";
 export type { EngineContext } from "./core/context.js";
-export type { BudgetBookData } from "./core/providers.js";
 export type { StyleAnalysis } from "./core/types.js";
 export type { DocumentTypeDefinition, SectionOutput, ReviewerSpec } from "./core/doc-type.js";
 export type { PipelineStep, PipelineContext, PipelineState, StepResult } from "./core/pipeline/types.js";
@@ -51,9 +50,6 @@ export interface DocumentEngine {
   /** Gracefully shut down connections */
   shutdown(): Promise<void>;
 }
-
-/** @deprecated Use DocumentEngine instead. */
-export type BudgetBookEngine = DocumentEngine;
 
 export interface CreateEngineOptions {
   connectionString: string;
@@ -125,8 +121,3 @@ export function createDocumentEngine(
   };
 }
 
-/**
- * @deprecated Use createDocumentEngine instead.
- * Kept for backward compatibility.
- */
-export const createBudgetBookEngine = createDocumentEngine;

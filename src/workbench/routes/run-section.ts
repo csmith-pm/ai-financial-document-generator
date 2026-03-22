@@ -15,7 +15,7 @@ import { buildAgentPrompt } from "../../core/agents/promptBuilder.js";
 import type { SectionOutput } from "../../core/doc-type.js";
 
 const runSectionSchema = z.object({
-  docType: z.string().min(1).default("budget_book"),
+  docType: z.string().min(1),
   sectionType: z.string().min(1),
   tenantId: z.string().min(1),
   data: z.record(z.unknown()).optional(),
@@ -64,7 +64,7 @@ export async function runSectionRoutes(
       return;
     }
 
-    const systemPrompt = await buildAgentPrompt(db, creatorAgent.type, body.tenantId);
+    const systemPrompt = await buildAgentPrompt(db, creatorAgent.type, body.tenantId, creatorAgent.baseSystemPrompt);
     const userPrompt = docType.getSectionPrompt(body.sectionType, data, null);
 
     const result = await ai.callJson<SectionOutput>(systemPrompt, userPrompt, {

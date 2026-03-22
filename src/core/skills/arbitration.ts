@@ -11,10 +11,6 @@ import { eq, and, or } from "drizzle-orm";
 import { agentSkills } from "../../db/schema.js";
 import { type DrizzleInstance } from "../../db/connection.js";
 
-// Re-export budget-book category priority for backward compatibility
-export { CATEGORY_PRIORITY } from "../../doc-types/budget-book/category-priority.js";
-
-import { CATEGORY_PRIORITY as DEFAULT_PRIORITY } from "../../doc-types/budget-book/category-priority.js";
 
 interface NewSkill {
   agentType: string;
@@ -32,7 +28,7 @@ interface NewSkill {
  * @param db - database instance
  * @param tenantId - tenant ID
  * @param newSkill - the skill to insert
- * @param categoryPriority - optional priority map; defaults to budget-book priorities
+ * @param categoryPriority - optional priority map for conflict resolution
  */
 export async function negotiateSkill(
   db: DrizzleInstance,
@@ -40,7 +36,7 @@ export async function negotiateSkill(
   newSkill: NewSkill,
   categoryPriority?: Record<string, number>
 ): Promise<void> {
-  const _priorities = categoryPriority ?? DEFAULT_PRIORITY;
+  const _priorities = categoryPriority ?? {};
   // priorities used for getCategoryPriority — currently the arbitration
   // logic doesn't use category priority directly (it uses confidence),
   // but the map is available for future use.

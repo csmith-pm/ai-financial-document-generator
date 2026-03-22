@@ -2,8 +2,7 @@
  * Global Skill Seeds — generic seeding mechanism.
  *
  * The seed data itself lives in each doc type module.
- * This file provides the generic seedGlobalSkills function
- * and re-exports GLOBAL_SEEDS from budget-book for backward compat.
+ * This file provides the generic seedGlobalSkills function.
  */
 
 import { eq } from "drizzle-orm";
@@ -11,23 +10,17 @@ import { agentSkills } from "../../db/schema.js";
 import { type DrizzleInstance } from "../../db/connection.js";
 import type { SeedSkill } from "../doc-type.js";
 
-// Re-export budget-book seeds for backward compatibility
-export { GLOBAL_SEEDS } from "../../doc-types/budget-book/seeds.js";
-
 /**
  * Seed global skills. Idempotent — checks for existing globals before inserting.
  *
  * @param db - database instance
- * @param seeds - optional explicit seed list; if omitted, uses budget-book seeds
+ * @param seeds - the seed skills to insert (from the doc type definition)
  */
 export async function seedGlobalSkills(
   db: DrizzleInstance,
-  seeds?: SeedSkill[]
+  seeds: SeedSkill[]
 ): Promise<number> {
-  // Lazy import to avoid circular deps when no seeds passed
-  const seedList =
-    seeds ??
-    (await import("../../doc-types/budget-book/seeds.js")).GLOBAL_SEEDS;
+  const seedList = seeds;
 
   // Check if globals already exist
   const existingGlobals = await db
