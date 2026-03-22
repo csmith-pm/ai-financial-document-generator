@@ -81,75 +81,19 @@ export interface StorageProvider {
 
 // ─── Data Provider ──────────────────────────────────────────────────────────
 
-export interface RevenueDetailRow {
-  fundCode: string;
-  fundName: string;
-  accountCode: string;
-  accountName: string;
-  priorActual: number;
-  currentBudget: number;
-  proposedBudget: number;
-}
+// BudgetBookData types — canonical definitions live in doc-types/budget-book/data-types.ts
+export type {
+  RevenueDetailRow,
+  ExpenditureByDepartmentRow,
+  PersonnelDetailRow,
+  CapitalProjectDetail,
+  ProjectionYear,
+  CommunityProfile,
+  BudgetBookData,
+} from "../doc-types/budget-book/data-types.js";
 
-export interface ExpenditureByDepartmentRow {
-  departmentCode: string;
-  departmentName: string;
-  priorActual: number;
-  currentBudget: number;
-  proposedBudget: number;
-}
-
-export interface PersonnelDetailRow {
-  department: string;
-  positionTitle: string;
-  fte: number;
-  salary: number;
-  benefits: number;
-  totalCompensation: number;
-}
-
-export interface CapitalProjectDetail {
-  projectName: string;
-  description: string;
-  department: string;
-  totalCost: number;
-  fundingSource: string;
-  yearOneAmount: number;
-  status: string;
-}
-
-export interface ProjectionYear {
-  fiscalYear: number;
-  revenue: number;
-  expenditure: number;
-  fundBalance: number;
-  notes: string;
-}
-
-export interface CommunityProfile {
-  name: string;
-  state: string;
-  population: number;
-  squareMiles: number;
-  formOfGovernment: string;
-  established: string;
-}
-
-export interface BudgetBookData {
-  fiscalYear: number;
-  communityProfile: CommunityProfile;
-  revenueDetail: RevenueDetailRow[];
-  expenditureByDepartment: ExpenditureByDepartmentRow[];
-  personnelDetail: PersonnelDetailRow[];
-  capitalProjects: CapitalProjectDetail[];
-  multiYearProjections: ProjectionYear[];
-  totalRevenue: number;
-  totalExpenditure: number;
-  totalPersonnelCost: number;
-  totalCapitalCost: number;
-  executiveSummary?: string;
-  additionalContext?: Record<string, unknown>;
-}
+// Re-import for use in DataProvider below
+import type { BudgetBookData } from "../doc-types/budget-book/data-types.js";
 
 export interface DataProvider {
   /** Fetch structured budget data from whatever source system the host app uses */
