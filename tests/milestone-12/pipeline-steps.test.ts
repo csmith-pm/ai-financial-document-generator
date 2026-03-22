@@ -8,6 +8,9 @@ import { z } from "zod";
 import { seedSkillsStep } from "../../src/core/pipeline/steps/seed-skills.js";
 import { analyzeStyleStep } from "../../src/core/pipeline/steps/analyze-style.js";
 import { fetchDataStep } from "../../src/core/pipeline/steps/fetch-data.js";
+import { detectGapsStep } from "../../src/core/pipeline/steps/detect-gaps.js";
+import { generateSectionsStep } from "../../src/core/pipeline/steps/generate-sections.js";
+import { renderChartsStep } from "../../src/core/pipeline/steps/render-charts.js";
 
 // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -16,16 +19,26 @@ function makeMockCtx(): EngineContext {
     set: vi.fn().mockReturnThis(),
     where: vi.fn().mockResolvedValue([]),
   };
+  // Deep mock for Drizzle's chained query builder
+  const selectChain = {
+    from: vi.fn().mockReturnValue({
+      where: vi.fn().mockReturnValue({
+        orderBy: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue([]),
+        }),
+        limit: vi.fn().mockResolvedValue([]),
+      }),
+      orderBy: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue([]),
+        }),
+      }),
+    }),
+  };
   return {
     db: {
       update: vi.fn().mockReturnValue(mockChain),
-      select: vi.fn().mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            limit: vi.fn().mockResolvedValue([]),
-          }),
-        }),
-      }),
+      select: vi.fn().mockReturnValue(selectChain),
       insert: vi.fn().mockReturnValue({
         values: vi.fn().mockReturnValue({
           returning: vi.fn().mockResolvedValue([]),
@@ -196,5 +209,119 @@ describe("fetchDataStep", () => {
     await expect(fetchDataStep.execute(pCtx)).rejects.toThrow(
       "no data source"
     );
+  });
+});
+
+// ── detect-gaps ──────────────────────────────────────────────────────────
+
+describe("detectGapsStep", () => {
+  it("has correct id", () => {
+    expect(detectGapsStep.id).toBe("detect_gaps");
+  });
+
+  it("skips when no gaps detected", async () => {
+    const pCtx = makePipelineCtx({
+      docType: { detectDataGaps: () => [] },
+      state: { documentData: {} },
+    });
+    const result = await detectGapsStep.execute(pCtx);
+    expect(result.status).toBe("skipped");
+  });
+
+  it("creates todos when gaps are detected", async () => {
+    const gaps = [
+      { category: "data_gap" as const, title: "Missing data", description: "No revenue", sectionType: "revenue_summary", priority: "high" as const },
+    ];
+    const pCtx = makePipelineCtx({
+      docType: { detectDataGaps: () => gaps },
+      state: { documentData: {} },
+    });
+    const result = await detectGapsStep.execute(pCtx);
+    expect(result.status).toBe("completed");
+    expect(result.message).toContain("1 data gap");
+  });
+});
+
+// ── generate-sections ────────────────────────────────────────────────────
+
+describe("generateSectionsStep", () => {
+  it("has correct id", () => {
+    expect(generateSectionsStep.id).toBe("generate_sections");
+  });
+
+  it("generates sections using doc type specs", async () => {
+    const mockSection = {
+      sectionType: "revenue_summary",
+      title: "Revenue Summary",
+      narrativeContent: "Revenue is...",
+      tableData: [],
+      chartConfigs: [],
+    };
+
+    const pCtx = makePipelineCtx({
+      docType: {
+        sectionTypes: [
+          { id: "revenue_summary", name: "Revenue Summary", order: 1, parallel: true, structural: false },
+        ],
+        getAgent: () => ({
+          name: "Creator",
+          type: "bb_creator",
+          role: "creator",
+          baseSystemPrompt: "You are a creator",
+          skillDomain: [],
+          producesSkillsFor: [],
+          temperature: 0.4,
+          maxTokens: 4096,
+        }),
+        getSectionPrompt: () => "Generate revenue...",
+      },
+      state: { documentData: { revenueDetail: [] } },
+    });
+
+    // Mock AI response
+    (pCtx.ctx.ai as { callJson: ReturnType<typeof vi.fn> }).callJson = vi.fn().mockResolvedValue({
+      data: mockSection,
+      inputTokens: 100,
+      outputTokens: 200,
+      model: "test",
+    });
+
+    const result = await generateSectionsStep.execute(pCtx);
+    expect(result.status).toBe("completed");
+    expect(pCtx.state.sections).toHaveLength(1);
+    expect(pCtx.state.sections[0]!.sectionType).toBe("revenue_summary");
+  });
+});
+
+// ── render-charts ────────────────────────────────────────────────────────
+
+describe("renderChartsStep", () => {
+  it("has correct id", () => {
+    expect(renderChartsStep.id).toBe("render_charts");
+  });
+
+  it("persists sections to DB", async () => {
+    const pCtx = makePipelineCtx({
+      docType: {
+        sectionTypes: [
+          { id: "revenue_summary", name: "Revenue Summary", order: 1, parallel: true, structural: false },
+        ],
+      },
+      state: {
+        sections: [
+          {
+            sectionType: "revenue_summary",
+            title: "Revenue Summary",
+            narrativeContent: "Revenue is...",
+            tableData: [],
+            chartConfigs: [],
+          },
+        ],
+      },
+    });
+
+    const result = await renderChartsStep.execute(pCtx);
+    expect(result.status).toBe("completed");
+    expect(pCtx.ctx.db.insert).toHaveBeenCalled();
   });
 });
