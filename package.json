@@ -25,8 +25,8 @@
     "db:push": "drizzle-kit push",
     "db:migrate": "drizzle-kit migrate",
     "db:generate": "drizzle-kit generate",
-    "start": "node dist/api/server.js",
-    "worker": "node dist/worker/index.js"
+    "start": "node dist/bin/server.js",
+    "worker": "node dist/bin/worker.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
