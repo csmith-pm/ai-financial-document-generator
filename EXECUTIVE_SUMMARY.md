@@ -95,7 +95,7 @@ We're not starting from zero. ClearGov already has **~1,600 customers producing 
 | Metric | Value |
 |--------|-------|
 | Total addressable entities (US) | 20,000+ |
-| Documents per entity per year | 4-10 |
+| Documents per entity per year | 4-16+ |
 | Total documents produced annually | 80,000 - 200,000 |
 | ClearGov customers (budget book) | ~1,600 |
 | ClearGov customers (ACFR) | ~250 |
