@@ -60,13 +60,13 @@ The engine ships with two fully implemented document types today:
 - Optimized for non-technical audiences
 
 ### Pluggable Architecture
-The engine is designed from the ground up to support **any financial document type**. Adding a new document type means implementing a well-defined interface — not rewriting the engine. This means we can rapidly expand to:
+The engine is designed from the ground up to support **any financial document type**. Adding a new document type means implementing a well-defined interface — not rewriting the engine. The expansion roadmap spans all three document tiers:
 
-- Comprehensive Annual Financial Reports (ACFRs)
-- Enterprise fund reports
-- Special district disclosures
-- K-1 financial statements
-- Capital improvement plans
+- **Flagship**: Comprehensive Annual Financial Reports (ACFRs)
+- **Mid-Complexity**: Capital Improvement Plans, Enterprise Fund Reports
+- **Recurring**: Budget-in-Brief, Monthly/Quarterly Budget-to-Actuals, Special District Disclosures
+
+Each new document type plugs into the same self-improving pipeline — the same review-and-learn cycle that makes Budget Books better with every generation.
 
 ---
 
@@ -74,23 +74,43 @@ The engine is designed from the ground up to support **any financial document ty
 
 ### Who This Is For
 
-**Municipal finance departments** — the 90,000+ local governments across the United States, each producing 1-3 major financial documents annually. Particularly mid-size to large municipalities (50,000+ population) where document complexity and compliance pressure are highest.
+**Every government entity that produces financial documents** — municipalities, K-12 school districts, special districts, water and sewer authorities, transit agencies, and state-level offices. More than **20,000 entities** in the United States alone, each producing **4-10 financial documents per year** ranging from flagship annual publications to recurring monthly reports.
+
+This isn't a niche. It's the entire public-sector financial reporting ecosystem.
 
 ### The Opportunity
 
+We're not starting from zero. ClearGov already has **~1,600 customers producing budget books** and **~250 creating ACFRs** on our platform — a built-in launch audience with structured financial data ready to go.
+
+**Document Tiers by Complexity and Value:**
+
+| Tier | Document Types | Manual Effort | Staff Labor Cost | Our Price Point |
+|------|---------------|---------------|-----------------|-----------------|
+| **Flagship** | Budget Book, ACFR | 150-500+ hours over 2-4 months | $7,500 - $50,000 | $5,000 - $10,000/doc |
+| **Mid-Complexity** | PAFR, Capital Improvement Plan, Enterprise Fund Report | 40-100 hours over 2-6 weeks | $2,000 - $10,000 | $2,000 - $5,000/doc |
+| **Recurring** | Budget-in-Brief, Monthly Budget-to-Actuals, Special District Disclosures | 10-40 hours, monthly/quarterly | $500 - $4,000 | $500 - $2,000/doc |
+
+**The math is staggering:**
+
 | Metric | Value |
 |--------|-------|
-| ClearGov customer base | 250+ municipalities |
-| Documents per customer per year | 1-3 |
-| Manual labor per document | 50-150 hours |
-| Labor cost per document | $2,500 - $15,000 |
-| **Addressable revenue (ClearGov base)** | **$625K - $3.75M/year** |
+| Total addressable entities (US) | 20,000+ |
+| Documents per entity per year | 4-10 |
+| Total documents produced annually | 80,000 - 200,000 |
+| ClearGov customers (budget book) | ~1,600 |
+| ClearGov customers (ACFR) | ~250 |
+| Current ClearGov software pricing | $15,000 - $40,000/year |
+| **Blended ARPU (Year 1, flagships only)** | **~$20,000** |
+| **Blended ARPU (Year 3, full suite)** | **~$30,000+** |
 
-Beyond the existing ClearGov customer base, adjacent markets multiply the opportunity:
+For context: ClearGov already charges **$15,000-$40,000/year** for budget book software alone. AI-powered document generation isn't a discount offering — it's a **premium add-on** to an already premium product that delivers 10x the labor savings.
 
-- **Audit and consulting firms** that produce financial documents on behalf of municipalities
+**Adjacent markets multiply the opportunity further:**
+
+- **Audit and consulting firms** that produce financial documents on behalf of municipalities — one partner = dozens of entities
 - **State government finance offices** with larger, more complex documents
-- **Special districts** — school boards, water utilities, transit authorities
+- **K-12 school districts** — 13,000+ districts, each with mandatory annual financial reporting
+- **Special districts** — water utilities, transit authorities, fire districts, library systems
 - **International markets** — Canadian provinces, UK councils, Australian local governments
 
 ### Competitive Position
@@ -101,7 +121,8 @@ There is **no comparable product in market**. Municipal financial document produ
 - **Compliance expertise built in** — GFOA criteria and WCAG accessibility are part of the core engine, not an afterthought
 - **Self-improving** — The skill system creates a compounding advantage: more documents generated means better output quality, creating a flywheel that competitors can't replicate without similar data
 - **Style continuity** — Prior-year analysis ensures brand consistency, a top concern for finance directors
-- **ClearGov integration** — Direct access to structured financial data from 250+ existing customers
+- **1,850+ captive customers** — ClearGov's existing base with structured data already on the platform — zero cold-start friction
+- **Premium positioning** — Customers already pay $15K-$40K for the software; document generation is a value-add they'll pay for, not a commodity
 
 ---
 
@@ -117,9 +138,40 @@ Offer Document Engine as an independent product for municipalities not on ClearG
 License to audit firms and government consulting practices who produce these documents on behalf of clients. **Multiplier effect: one partner = dozens of municipalities.**
 
 ### Pricing Model
-- Per-document pricing ($500-2,000 per generation) aligned with value delivered
-- Annual subscription with document allowance for predictable budgeting
-- Enterprise tier with custom document types and dedicated training
+
+**Tiered per-document pricing** that scales with complexity and value delivered:
+
+| Package | What's Included | Annual Price |
+|---------|----------------|-------------|
+| **Complete Suite** | All document types — flagships, mid-complexity, unlimited recurring | $25,000 - $50,000/year |
+| **Core** | Flagship + mid-complexity documents (Budget Book, ACFR, PAFR, CIP) | $15,000 - $25,000/year |
+| **Essentials** | Recurring documents only (Budget-in-Brief, monthly actuals, disclosures) | $5,000 - $10,000/year |
+| **Enterprise** | Custom document types, dedicated training, priority support, API access | Custom pricing |
+
+**A la carte generation** is also available for entities that need occasional documents without a subscription commitment:
+
+| Tier | Per-Document Price |
+|------|-------------------|
+| Flagship (Budget Book, ACFR) | $5,000 - $10,000 |
+| Mid-Complexity (PAFR, CIP, Enterprise Fund) | $2,000 - $5,000 |
+| Recurring (Budget-in-Brief, Monthly Actuals) | $500 - $2,000 |
+
+Every tier delivers **massive ROI**: a flagship document that costs $50,000 in staff labor is produced for $5,000-$10,000 — a **5-10x return** from day one.
+
+### Revenue Projections
+
+Anchored to ClearGov's existing customer base of ~1,600 budget book customers and ~250 ACFR customers:
+
+| | **Year 1** | **Year 2** | **Year 3** |
+|---|---|---|---|
+| **Customers** | 400-500 (existing base penetration) | 2,000-4,000 (base + new logos) | 8,000-12,000 (market expansion) |
+| **Base penetration** | 20-30% of budget book; 10-15% of ACFR | 50%+ of existing base | 80%+ of base; K-12, special districts |
+| **Avg docs/customer** | 2-3 (flagships) | 4-6 (flagships + mid) | 6-10 (full suite) |
+| **Blended ARPU** | ~$20,000 | ~$25,000 | ~$30,000+ |
+| **ARR** | **$8M - $10M** | **$25M - $50M** | **$60M - $100M+** |
+| **Key driver** | ClearGov upsell (zero friction) | New entity acquisition + doc expansion | Partner channel + international |
+
+**Why penetration is fast:** These aren't cold prospects. ClearGov's 1,600+ budget book customers already have their financial data on our platform. Document generation is a one-click upsell — not a new buying decision. The sales motion is "turn on the feature," not "evaluate a new vendor."
 
 ---
 
@@ -136,20 +188,25 @@ License to audit firms and government consulting practices who produce these doc
 
 ### What's Next
 
-| Priority | Initiative | Impact |
-|----------|-----------|--------|
-| 1 | ACFR document type | Opens audit firm channel |
-| 2 | ClearGov data connector | Zero-friction for existing customers |
-| 3 | Analytics dashboard | Usage metrics, cost savings tracking, ROI reporting |
-| 4 | Real-time collaboration | Multi-user editing, approval workflows |
-| 5 | International localization | Canadian, UK, Australian market expansion |
+| Priority | Initiative | Tier | Impact |
+|----------|-----------|------|--------|
+| 1 | ACFR document type | Flagship | Opens audit firm channel; 250 existing ClearGov ACFR customers |
+| 2 | Budget-in-Brief | Recurring | High-frequency doc; fast win for every budget book customer |
+| 3 | Monthly Budget-to-Actuals | Recurring | Recurring revenue driver; 12 docs/year per customer |
+| 4 | ClearGov data connector | Platform | Zero-friction for 1,600+ existing customers |
+| 5 | Capital Improvement Plan | Mid-Complexity | Expands mid-tier portfolio |
+| 6 | Analytics dashboard | Platform | Usage metrics, cost savings tracking, ROI reporting |
+| 7 | Real-time collaboration | Platform | Multi-user editing, approval workflows |
+| 8 | International localization | Market | Canadian, UK, Australian market expansion |
 
 ---
 
 ## The Bottom Line
 
-Municipal governments spend millions of hours annually producing financial documents by hand. Document Engine eliminates 80-90% of that labor while delivering higher quality, guaranteed compliance, and continuous improvement.
+Twenty thousand government entities. Four to ten documents each. Hundreds of hours of manual labor per document. **That's millions of hours of work — every single year — waiting to be automated.**
 
-The technology is built. The architecture is proven. The market is waiting.
+Document Engine eliminates 80-90% of that labor while delivering higher quality, guaranteed compliance, and continuous improvement. With 1,600+ captive customers already on the ClearGov platform, this isn't a cold-start play — it's a feature flip away from an **$8-10M Year 1 revenue line** scaling to **$100M+ by Year 3**.
+
+The technology is built. The architecture is proven. The customers are waiting.
 
 **The question isn't whether AI will transform municipal financial reporting — it's whether we'll be the ones leading it.**
