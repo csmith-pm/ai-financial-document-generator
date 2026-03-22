@@ -11,6 +11,8 @@ export interface EngineContext {
   storage: StorageProvider;
   data: DataProvider;
   tenantId: string;
+  /** Document type ID — defaults to "budget_book" if not set */
+  docTypeId?: string;
   config: {
     maxIterations: number;
     chartsEnabled: boolean;
