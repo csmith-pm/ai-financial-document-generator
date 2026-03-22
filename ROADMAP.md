@@ -1,8 +1,8 @@
-# Budget Book Engine → Multi-Document Engine Roadmap
+# Document Engine Roadmap
 
 ## Project Vision
 
-Restructuring the budget-book-engine from a single-purpose budget book generator into a **multi-document-type engine** that can generate any municipal financial document (budget books, ACFRs, PAFRs, K-1s, etc.). The engine uses a two-layer architecture: a generic core (`src/core/`) with pipeline executor, skill system, and provider interfaces, plus pluggable document types (`src/doc-types/`) that define sections, agents, reviewers, and rendering.
+Restructuring the document engine from a single-purpose budget book generator into a **multi-document-type engine** that can generate any municipal financial document (budget books, ACFRs, PAFRs, K-1s, etc.). The engine uses a two-layer architecture: a generic core (`src/core/`) with pipeline executor, skill system, and provider interfaces, plus pluggable document types (`src/doc-types/`) that define sections, agents, reviewers, and rendering.
 
 ---
 

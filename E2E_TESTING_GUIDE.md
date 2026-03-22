@@ -33,7 +33,7 @@ E2E tests exercise the full stack: the **Next.js UI** (port 3000) communicating 
 ### 1. Start infrastructure
 
 ```bash
-cd /path/to/budget-book-engine
+cd /path/to/document-engine
 docker-compose up -d postgres redis
 ```
 
@@ -42,7 +42,7 @@ This starts PostgreSQL 16 (port 5432) and Redis 7 (port 6379).
 ### 2. Build the engine
 
 ```bash
-cd /path/to/budget-book-engine
+cd /path/to/document-engine
 pnpm install
 pnpm build
 ```
@@ -74,7 +74,7 @@ pnpm test:e2e
 ```
 
 Playwright will automatically start both servers:
-- **API server** on port 4000 (from `budget-book-engine`)
+- **API server** on port 4000 (from `document-engine`)
 - **UI dev server** on port 3000 (from `document-engine-ui`)
 
 ### Run with Playwright UI (interactive debugging)
@@ -334,7 +334,7 @@ npx playwright install
 **Symptom:** Playwright reports "Server failed to start" for port 4000.
 
 **Check:**
-1. Engine is built: `pnpm build` in budget-book-engine
+1. Engine is built: `pnpm build` in document-engine
 2. Database is running: `docker-compose ps`
 3. Migrations applied: `pnpm db:push`
 4. Environment variables set
