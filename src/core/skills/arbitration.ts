@@ -7,13 +7,17 @@
  * No AI calls — this is pure code logic.
  */
 
-import { eq, and, or, isNull } from "drizzle-orm";
+import { eq, and, or } from "drizzle-orm";
 import { agentSkills } from "../../db/schema.js";
 import { type DrizzleInstance } from "../../db/connection.js";
-import type { AgentType } from "../agents/definitions.js";
+
+// Re-export budget-book category priority for backward compatibility
+export { CATEGORY_PRIORITY } from "../../doc-types/budget-book/category-priority.js";
+
+import { CATEGORY_PRIORITY as DEFAULT_PRIORITY } from "../../doc-types/budget-book/category-priority.js";
 
 interface NewSkill {
-  agentType: AgentType;
+  agentType: string;
   skill: string;
   category: string;
   trigger: string;
@@ -21,46 +25,27 @@ interface NewSkill {
   source: string;
 }
 
-/** Category priority: higher number = higher priority */
-const CATEGORY_PRIORITY: Record<string, number> = {
-  // ADA / accessibility — highest priority
-  accessibility: 30,
-  accessibility_criteria: 30,
-  wcag_patterns: 30,
-  chart_accessibility: 30,
-
-  // GFOA criteria — high priority
-  gfoa_criteria: 20,
-  review_criteria: 20,
-  scoring_calibration: 20,
-  content_quality: 20,
-
-  // Formatting / style — lower priority
-  revenue_formatting: 10,
-  expenditure_formatting: 10,
-  personnel_formatting: 10,
-  capital_formatting: 10,
-  chart_design: 10,
-  narrative_style: 10,
-
-  // Advisory / general — lowest
-  advisory: 5,
-  municipal_finance: 5,
-};
-
-function getCategoryPriority(category: string): number {
-  return CATEGORY_PRIORITY[category] ?? 10;
-}
-
 /**
  * Insert a new skill, resolving conflicts with existing skills
  * in the same category deterministically.
+ *
+ * @param db - database instance
+ * @param tenantId - tenant ID
+ * @param newSkill - the skill to insert
+ * @param categoryPriority - optional priority map; defaults to budget-book priorities
  */
 export async function negotiateSkill(
   db: DrizzleInstance,
   tenantId: string,
-  newSkill: NewSkill
+  newSkill: NewSkill,
+  categoryPriority?: Record<string, number>
 ): Promise<void> {
+  const _priorities = categoryPriority ?? DEFAULT_PRIORITY;
+  // priorities used for getCategoryPriority — currently the arbitration
+  // logic doesn't use category priority directly (it uses confidence),
+  // but the map is available for future use.
+  void _priorities;
+
   // Find existing active skills for same agent + tenant + category
   const existing = await db
     .select()
