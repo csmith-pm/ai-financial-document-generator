@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chart Renderer</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/recharts@2/umd/Recharts.js" crossorigin></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: white; font-family: Helvetica, Arial, sans-serif; }
+    #chart-root { display: inline-block; }
+  </style>
+</head>
+<body>
+  <div id="chart-root"></div>
+  <script>
+    /* global React, ReactDOM, Recharts */
+    const e = React.createElement;
+    const {
+      BarChart, Bar, PieChart, Pie, Cell, LineChart, Line,
+      XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+    } = Recharts;
+
+    function renderChart(config) {
+      const { type, title, data, width, height, colors, labels, dataKeys, categoryKey } = config;
+      const chartColors = colors || [
+        "#1a365d", "#3182ce", "#38a169", "#d69e2e",
+        "#e53e3e", "#805ad5", "#dd6b20", "#319795",
+      ];
+
+      const titleEl = e("h3", {
+        style: { textAlign: "center", marginBottom: 8, fontSize: 16, color: "#1a202c", fontWeight: 600 },
+      }, title);
+
+      let chartEl;
+
+      if (type === "bar") {
+        chartEl = e(BarChart, { width, height: height - 40, data },
+          e(CartesianGrid, { strokeDasharray: "3 3" }),
+          e(XAxis, { dataKey: categoryKey, tick: { fontSize: 11 } }),
+          e(YAxis, {
+            tick: { fontSize: 11 },
+            tickFormatter: (v) => v >= 1000000 ? `$${(v / 1000000).toFixed(1)}M` : v >= 1000 ? `$${(v / 1000).toFixed(0)}K` : `$${v}`,
+          }),
+          labels?.legend !== false ? e(Legend, null) : null,
+          e(Tooltip, { formatter: (v) => `$${Number(v).toLocaleString()}` }),
+          ...dataKeys.map((key, i) =>
+            e(Bar, { key, dataKey: key, fill: chartColors[i % chartColors.length] })
+          )
+        );
+      } else if (type === "stacked-bar") {
+        chartEl = e(BarChart, { width, height: height - 40, data },
+          e(CartesianGrid, { strokeDasharray: "3 3" }),
+          e(XAxis, { dataKey: categoryKey, tick: { fontSize: 11 } }),
+          e(YAxis, {
+            tick: { fontSize: 11 },
+            tickFormatter: (v) => v >= 1000000 ? `$${(v / 1000000).toFixed(1)}M` : v >= 1000 ? `$${(v / 1000).toFixed(0)}K` : `$${v}`,
+          }),
+          labels?.legend !== false ? e(Legend, null) : null,
+          e(Tooltip, { formatter: (v) => `$${Number(v).toLocaleString()}` }),
+          ...dataKeys.map((key, i) =>
+            e(Bar, { key, dataKey: key, stackId: "stack", fill: chartColors[i % chartColors.length] })
+          )
+        );
+      } else if (type === "grouped-bar") {
+        chartEl = e(BarChart, { width, height: height - 40, data },
+          e(CartesianGrid, { strokeDasharray: "3 3" }),
+          e(XAxis, { dataKey: categoryKey, tick: { fontSize: 11 } }),
+          e(YAxis, {
+            tick: { fontSize: 11 },
+            tickFormatter: (v) => v >= 1000000 ? `$${(v / 1000000).toFixed(1)}M` : v >= 1000 ? `$${(v / 1000).toFixed(0)}K` : `$${v}`,
+          }),
+          labels?.legend !== false ? e(Legend, null) : null,
+          e(Tooltip, { formatter: (v) => `$${Number(v).toLocaleString()}` }),
+          ...dataKeys.map((key, i) =>
+            e(Bar, { key, dataKey: key, fill: chartColors[i % chartColors.length] })
+          )
+        );
+      } else if (type === "line") {
+        chartEl = e(LineChart, { width, height: height - 40, data },
+          e(CartesianGrid, { strokeDasharray: "3 3" }),
+          e(XAxis, { dataKey: categoryKey, tick: { fontSize: 11 } }),
+          e(YAxis, {
+            tick: { fontSize: 11 },
+            tickFormatter: (v) => v >= 1000000 ? `$${(v / 1000000).toFixed(1)}M` : v >= 1000 ? `$${(v / 1000).toFixed(0)}K` : `$${v}`,
+          }),
+          labels?.legend !== false ? e(Legend, null) : null,
+          e(Tooltip, { formatter: (v) => `$${Number(v).toLocaleString()}` }),
+          ...dataKeys.map((key, i) =>
+            e(Line, {
+              key, dataKey: key, stroke: chartColors[i % chartColors.length],
+              strokeWidth: 2, dot: { r: 4 },
+            })
+          )
+        );
+      } else if (type === "pie") {
+        const RADIAN = Math.PI / 180;
+        const renderLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, name }) => {
+          const radius = innerRadius + (outerRadius - innerRadius) * 1.3;
+          const x = cx + radius * Math.cos(-midAngle * RADIAN);
+          const y = cy + radius * Math.sin(-midAngle * RADIAN);
+          return e("text", {
+            x, y, fill: "#333", textAnchor: x > cx ? "start" : "end",
+            dominantBaseline: "central", fontSize: 11,
+          }, `${name} (${(percent * 100).toFixed(0)}%)`);
+        };
+
+        const valueKey = dataKeys[0] || "value";
+        chartEl = e(PieChart, { width, height: height - 40 },
+          e(Pie, {
+            data, dataKey: valueKey, nameKey: categoryKey,
+            cx: "50%", cy: "50%", outerRadius: Math.min(width, height - 40) * 0.3,
+            label: renderLabel, labelLine: true,
+          },
+            ...data.map((_, i) =>
+              e(Cell, { key: `cell-${i}`, fill: chartColors[i % chartColors.length] })
+            )
+          ),
+          e(Tooltip, { formatter: (v) => `$${Number(v).toLocaleString()}` })
+        );
+      }
+
+      const container = e("div", { style: { width, padding: "10px 0" } }, titleEl, chartEl);
+      const root = ReactDOM.createRoot(document.getElementById("chart-root"));
+      root.render(container);
+    }
+
+    window.__renderChart = renderChart;
+    window.__ready = true;
+  </script>
+</body>
+</html>
