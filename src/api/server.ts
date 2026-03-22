@@ -9,6 +9,7 @@ import type {
 } from "../core/providers.js";
 import { authMiddleware } from "./middleware/auth.js";
 import { healthRoutes } from "./routes/health.js";
+import { documentRoutes } from "./routes/documents.js";
 import { booksRoutes } from "./routes/books.js";
 import { todosRoutes } from "./routes/todos.js";
 
@@ -40,11 +41,23 @@ export async function createServer(config: ServerConfig) {
 
   // Register routes
   await healthRoutes(app);
+
+  // Generic document routes (new)
+  await documentRoutes(app, {
+    db: config.db,
+    ai: config.ai,
+    storage: config.storage,
+    queue: config.queue,
+  });
+
+  // Backward-compatible book routes (legacy)
   await booksRoutes(app, {
     db: config.db,
     storage: config.storage,
     queue: config.queue,
   });
+
+  // Legacy todo routes under /api/books and /api/todos
   await todosRoutes(app, {
     db: config.db,
     ai: config.ai,

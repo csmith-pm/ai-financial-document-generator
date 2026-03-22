@@ -1,8 +1,8 @@
 import { z } from "zod";
 
-// ---- Books ----
+// ---- Documents (generic) ----
 
-export const createBookSchema = z.object({
+export const createDocumentSchema = z.object({
   docType: z.string().min(1).max(50).default("budget_book"),
   title: z.string().min(1).max(200),
   fiscalYear: z.number().int().min(2000).max(2100),
@@ -11,11 +11,24 @@ export const createBookSchema = z.object({
   versionId: z.string().optional(),
   maxIterations: z.number().int().min(1).max(10).default(3),
 });
-export type CreateBookInput = z.infer<typeof createBookSchema>;
+export type CreateDocumentInput = z.infer<typeof createDocumentSchema>;
 
-export const bookIdParamSchema = z.object({
+export const documentIdParamSchema = z.object({
   id: z.string().uuid(),
 });
+
+export const documentIdWithTodoParamSchema = z.object({
+  documentId: z.string().uuid(),
+});
+
+// ---- Backward-compatible aliases (books) ----
+
+/** @deprecated Use createDocumentSchema instead. */
+export const createBookSchema = createDocumentSchema;
+/** @deprecated Use CreateDocumentInput instead. */
+export type CreateBookInput = CreateDocumentInput;
+/** @deprecated Use documentIdParamSchema instead. */
+export const bookIdParamSchema = documentIdParamSchema;
 
 export const bookIdWithTodoParamSchema = z.object({
   bookId: z.string().uuid(),
