@@ -129,8 +129,11 @@ export async function runPipeline(
       }
     }
   } catch (error) {
+    const cause = error instanceof Error && error.cause
+      ? ` | Cause: ${error.cause instanceof Error ? error.cause.message : String(error.cause)}`
+      : "";
     const message =
-      error instanceof Error ? error.message : "Unknown error";
+      (error instanceof Error ? error.message : "Unknown error") + cause;
 
     // Set document status to failed
     await updateBookStatus(pCtx.ctx.db, documentId, "failed");

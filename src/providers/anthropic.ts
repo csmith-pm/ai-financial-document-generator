@@ -14,6 +14,10 @@ export interface AnthropicAiProviderConfig {
   apiKey: string;
   defaultModel?: string;
   maxTokens?: number;
+  /** Request timeout in milliseconds (default: 5 minutes) */
+  timeout?: number;
+  /** Max retries on transient errors (default: 3) */
+  maxRetries?: number;
 }
 
 export class AnthropicAiProvider implements AiProvider {
@@ -22,7 +26,11 @@ export class AnthropicAiProvider implements AiProvider {
   private defaultMaxTokens: number;
 
   constructor(config: AnthropicAiProviderConfig) {
-    this.client = new Anthropic({ apiKey: config.apiKey });
+    this.client = new Anthropic({
+      apiKey: config.apiKey,
+      timeout: config.timeout ?? 5 * 60 * 1000,   // 5 minutes
+      maxRetries: config.maxRetries ?? 3,
+    });
     this.defaultModel = config.defaultModel ?? DEFAULT_MODEL;
     this.defaultMaxTokens = config.maxTokens ?? DEFAULT_MAX_TOKENS;
   }

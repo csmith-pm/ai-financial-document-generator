@@ -34,6 +34,48 @@ interface SectionContent {
 // ---- Helpers ----
 
 /**
+ * Normalise a table cell value to a plain string.
+ *
+ * The AI sometimes returns cell values as objects (e.g. `{ content, isHeader, scope }`)
+ * instead of plain strings, especially when accessibility skills are injected.
+ * React error #31 ("Objects are not valid as a React child") occurs if these
+ * reach the renderer un-coerced.
+ */
+function normalizeCell(cell: unknown): string {
+  if (cell == null) return "";
+  if (typeof cell === "string") return cell;
+  if (typeof cell === "number" || typeof cell === "boolean") return String(cell);
+  if (typeof cell === "object") {
+    // Common AI output shapes: { content: "..." } or { value: "..." } or { text: "..." }
+    const obj = cell as Record<string, unknown>;
+    for (const key of ["content", "value", "text", "label"]) {
+      if (typeof obj[key] === "string") return obj[key] as string;
+      if (typeof obj[key] === "number") return String(obj[key]);
+    }
+    // Last resort — join all string values
+    const strings = Object.values(obj).filter((v) => typeof v === "string");
+    if (strings.length > 0) return strings.join(" ");
+  }
+  return String(cell);
+}
+
+/**
+ * Normalise an entire row's cells array, handling cases where the AI
+ * returns the row itself as an unexpected shape.
+ */
+function normalizeRow(row: unknown): { header: boolean; cells: string[] } {
+  if (row == null || typeof row !== "object") return { header: false, cells: [] };
+  const r = row as Record<string, unknown>;
+  const header = Boolean(r.header ?? r.isHeader ?? false);
+  const rawCells = Array.isArray(r.cells)
+    ? r.cells
+    : Array.isArray(r.values)
+      ? r.values
+      : [];
+  return { header, cells: rawCells.map(normalizeCell) };
+}
+
+/**
  * Split narrative text into paragraphs for rendering.
  */
 function splitNarrative(text: string): string[] {
@@ -161,11 +203,14 @@ function SectionPage({
   chartImages: Buffer[];
   styles: ReturnType<typeof createBudgetBookStyles>;
 }): React.ReactElement {
-  const paragraphs = splitNarrative(section.narrativeContent || "");
-  const tableRows = (section.tableData || []) as Array<{
-    header?: boolean;
-    cells: string[];
-  }>;
+  const narrativeText =
+    typeof section.narrativeContent === "string"
+      ? section.narrativeContent
+      : section.narrativeContent
+        ? String(section.narrativeContent)
+        : "";
+  const paragraphs = splitNarrative(narrativeText);
+  const tableRows = (section.tableData || []).map(normalizeRow);
 
   const elements: React.ReactElement[] = [];
 
@@ -268,12 +313,11 @@ function SectionPage({
         React.createElement(
           Text,
           { style: styles.chartCaption },
-          section.chartConfigs[ci]
-            ? String(
-                (section.chartConfigs[ci] as Record<string, unknown>).title ??
-                  ""
-              )
-            : ""
+          normalizeCell(
+            section.chartConfigs[ci]
+              ? (section.chartConfigs[ci] as Record<string, unknown>).title
+              : ""
+          )
         )
       )
     );
