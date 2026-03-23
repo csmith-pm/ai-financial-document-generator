@@ -16,7 +16,7 @@
     }
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && cp src/core/chartTemplate.html dist/core/chartTemplate.html",
     "dev": "tsc --watch",
     "test": "vitest run",
     "test:watch": "vitest",
