@@ -112,7 +112,14 @@ export async function runPipeline(
 
   try {
     for (const step of steps) {
+      // Auto-mark step as running
+      await updateJobStatus(ctx.db, documentId, step.id, "running", 0, `Running ${step.name}...`);
+
       const result = await step.execute(pCtx);
+
+      // Auto-mark step as completed (steps may have already updated progress internally)
+      const msg = result.message ?? (result.status === "skipped" ? "Skipped" : `${step.name} complete`);
+      await updateJobStatus(ctx.db, documentId, step.id, "completed", 100, msg);
 
       if (result.status === "skipped") {
         console.log(
