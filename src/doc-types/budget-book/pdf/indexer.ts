@@ -113,7 +113,8 @@ export async function indexPriorBudgetBook(
   return parseIndexResult(result.text);
 }
 
-function parseIndexResult(text: string): DocumentIndex {
+/** @internal Exported for testing. */
+export function parseIndexResult(text: string): DocumentIndex {
   let jsonStr = text.trim();
   const jsonMatch = /```(?:json)?\s*([\s\S]*?)```/.exec(jsonStr);
   if (jsonMatch?.[1]) {
@@ -130,7 +131,8 @@ function parseIndexResult(text: string): DocumentIndex {
   }
 }
 
-function buildDefaultIndex(): DocumentIndex {
+/** @internal Exported for testing. */
+export function buildDefaultIndex(): DocumentIndex {
   return {
     title: "Budget Book",
     sections: SECTION_TYPE_SPECS

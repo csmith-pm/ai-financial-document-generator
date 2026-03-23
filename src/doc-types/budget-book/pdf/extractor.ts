@@ -118,7 +118,8 @@ async function extractSection(
   return parseExtractionResult(result.text, sectionType);
 }
 
-function parseExtractionResult(text: string, sectionType: string): PriorSectionContent {
+/** @internal Exported for testing. */
+export function parseExtractionResult(text: string, sectionType: string): PriorSectionContent {
   let jsonStr = text.trim();
   const jsonMatch = /```(?:json)?\s*([\s\S]*?)```/.exec(jsonStr);
   if (jsonMatch?.[1]) {

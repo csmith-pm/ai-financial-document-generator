@@ -27,7 +27,8 @@ interface SheetSummary {
   allData: unknown[][];
 }
 
-interface ColumnMapping {
+/** @internal Exported for testing. */
+export interface ColumnMapping {
   municipalityName: string | null;
   accountType: string | null;
   accountTypeValues: {
@@ -93,7 +94,8 @@ Rules:
  * Build a diverse sample of rows that covers all Account Type values.
  * Returns up to ~15 rows: 3 per unique value in each categorical column.
  */
-function buildDiverseSample(
+/** @internal Exported for testing. */
+export function buildDiverseSample(
   headers: string[],
   allData: unknown[][],
 ): unknown[][] {
@@ -126,7 +128,8 @@ function buildDiverseSample(
 /**
  * Find column indices with low cardinality (2-20 unique values) — likely categorical.
  */
-function findCategoricalColumns(
+/** @internal Exported for testing. */
+export function findCategoricalColumns(
   headers: string[],
   allData: unknown[][],
 ): number[] {
@@ -178,8 +181,8 @@ async function mapColumns(
 
 // ─── Phase 2: Programmatic Processing ───────────────────────────────────────
 
-/** Safely parse a numeric value from a cell. */
-function toNumber(val: unknown): number {
+/** @internal Exported for testing. Safely parse a numeric value from a cell. */
+export function toNumber(val: unknown): number {
   if (val === null || val === undefined || val === "") return 0;
   if (typeof val === "number") return val;
   const cleaned = String(val).replace(/[$,\s()]/g, (m) => (m === "(" || m === ")" ? "" : ""));
@@ -234,7 +237,8 @@ function isCapitalRow(row: Record<string, unknown>, mapping: ColumnMapping): boo
  * Aggregates revenue by fund and expenditures by department to keep
  * the resulting BudgetBookData small enough for downstream AI prompts.
  */
-function processAllRows(
+/** @internal Exported for testing. */
+export function processAllRows(
   allRows: Record<string, unknown>[],
   mapping: ColumnMapping,
   fiscalYear: number,
