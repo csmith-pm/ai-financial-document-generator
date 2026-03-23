@@ -8,6 +8,8 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { eq } from "drizzle-orm";
+// Register all document types (budget_book, pafr) before pipeline runs
+import "../src/doc-types/index.js";
 import { createPool, createDb } from "../src/db/connection.js";
 import {
   documents,

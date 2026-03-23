@@ -234,16 +234,19 @@ describe("default pipeline", () => {
 
     expect(ids).toContain("index_prior_document");
     expect(ids).toContain("extract_prior_content");
+    expect(ids).toContain("merge_section_list");
 
-    // Order: analyze_prior_pdf < index < extract < fetch_data
+    // Order: analyze < index < extract < merge < fetch_data
     const analyzeIdx = ids.indexOf("analyze_prior_pdf");
     const indexIdx = ids.indexOf("index_prior_document");
     const extractIdx = ids.indexOf("extract_prior_content");
+    const mergeIdx = ids.indexOf("merge_section_list");
     const fetchIdx = ids.indexOf("fetch_data");
 
     expect(analyzeIdx).toBeLessThan(indexIdx);
     expect(indexIdx).toBeLessThan(extractIdx);
-    expect(extractIdx).toBeLessThan(fetchIdx);
+    expect(extractIdx).toBeLessThan(mergeIdx);
+    expect(mergeIdx).toBeLessThan(fetchIdx);
   });
 });
 

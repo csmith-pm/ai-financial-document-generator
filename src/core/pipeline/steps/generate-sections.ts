@@ -59,7 +59,9 @@ export const generateSectionsStep: PipelineStep = {
   async execute(pCtx: PipelineContext): Promise<StepResult> {
     const { ctx, docType, documentId, state } = pCtx;
     const sections: SectionOutput[] = [];
-    const allSectionSpecs = docType.sectionTypes;
+    const allSectionSpecs = state.effectiveSections.length > 0
+      ? state.effectiveSections
+      : docType.sectionTypes;
     const contentSpecs = allSectionSpecs.filter((s) => !s.structural);
     const structuralSpecs = allSectionSpecs.filter((s) => s.structural);
 
