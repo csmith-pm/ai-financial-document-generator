@@ -141,6 +141,14 @@ export interface DocumentTypeDefinition<TData = unknown> {
   /** Agent type used for conversational todo chat */
   advisorAgentType: string;
 
+  /**
+   * Agent type used for visual layout composition. If set, the
+   * compose-sections pipeline step produces a LayoutSpec from the
+   * component library instead of relying on the fixed Recharts
+   * chart pipeline. If undefined, legacy rendering is used.
+   */
+  composerAgentType?: string;
+
   // ── Iteration Control ───────────────────────────────────────────────
 
   /** S3 path prefix for this doc type's artifacts, e.g. "budget-books" */

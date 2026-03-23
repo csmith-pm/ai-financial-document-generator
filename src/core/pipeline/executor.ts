@@ -84,6 +84,8 @@ export function createInitialState(overrides?: Partial<PipelineState>): Pipeline
     iteration: 0,
     maxIterations: 3,
     previousScores: new Map(),
+    layoutSpec: null,
+    componentRegistry: null,
     ...overrides,
   };
 }

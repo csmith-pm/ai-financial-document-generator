@@ -9,6 +9,8 @@
 import type { EngineContext } from "../context.js";
 import type { DocumentTypeDefinition, SectionOutput, SectionTypeSpec } from "../doc-type.js";
 import type { StyleAnalysis, DocumentIndex, PriorSectionContent } from "../types.js";
+import type { DocumentLayoutSpec } from "../components/types.js";
+import type { ComponentRegistry } from "../components/registry.js";
 
 // ─── Pipeline State ──────────────────────────────────────────────────────
 
@@ -41,6 +43,10 @@ export interface PipelineState {
   maxIterations: number;
   /** Previous scores keyed by reviewer ID (managed by review-and-iterate step) */
   previousScores: Map<string, number | null>;
+  /** Layout spec produced by the Composer agent (set by compose-sections step) */
+  layoutSpec: DocumentLayoutSpec | null;
+  /** Component registry with built-in + dynamic components (set by compose-sections step) */
+  componentRegistry: ComponentRegistry | null;
 }
 
 // ─── Pipeline Context ────────────────────────────────────────────────────
