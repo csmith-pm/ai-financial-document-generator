@@ -19,6 +19,8 @@ export {
 // Steps
 export { seedSkillsStep } from "./steps/seed-skills.js";
 export { analyzeStyleStep } from "./steps/analyze-style.js";
+export { indexPriorDocumentStep } from "./steps/index-prior-document.js";
+export { extractPriorContentStep } from "./steps/extract-prior-content.js";
 export { fetchDataStep } from "./steps/fetch-data.js";
 export { detectGapsStep } from "./steps/detect-gaps.js";
 export { generateSectionsStep } from "./steps/generate-sections.js";
@@ -32,6 +34,8 @@ export { finalizeStep } from "./steps/finalize.js";
 import type { PipelineStep } from "./types.js";
 import { seedSkillsStep } from "./steps/seed-skills.js";
 import { analyzeStyleStep } from "./steps/analyze-style.js";
+import { indexPriorDocumentStep } from "./steps/index-prior-document.js";
+import { extractPriorContentStep } from "./steps/extract-prior-content.js";
 import { fetchDataStep } from "./steps/fetch-data.js";
 import { detectGapsStep } from "./steps/detect-gaps.js";
 import { generateSectionsStep } from "./steps/generate-sections.js";
@@ -44,20 +48,24 @@ import { finalizeStep } from "./steps/finalize.js";
  * Build the default document generation pipeline.
  *
  * Steps:
- * 1. Seed skills (idempotent)
- * 2. Analyze prior document for style
- * 3. Fetch/parse document data
- * 4. Detect data gaps → create todos
- * 5. Generate sections (parallel/sequential/structural)
- * 6. Render charts + persist sections
- * 7. Review and iterate (loop with revision)
- * 8. Render final output (PDF)
- * 9. Finalize (set status based on open todos)
+ *  1. Seed skills (idempotent)
+ *  2. Analyze prior document for style (colors, typography, layout)
+ *  3. Index prior document structure (TOC, section mapping)
+ *  4. Extract prior content (narrative, tables, charts per section)
+ *  5. Fetch/parse document data
+ *  6. Detect data gaps → create todos
+ *  7. Generate sections (rewrite from prior + new data, or generate from scratch)
+ *  8. Render charts + persist sections
+ *  9. Review and iterate (loop with revision)
+ * 10. Render final output (PDF)
+ * 11. Finalize (set status based on open todos)
  */
 export function buildDefaultPipeline(): PipelineStep[] {
   return [
     seedSkillsStep,
     analyzeStyleStep,
+    indexPriorDocumentStep,
+    extractPriorContentStep,
     fetchDataStep,
     detectGapsStep,
     generateSectionsStep,

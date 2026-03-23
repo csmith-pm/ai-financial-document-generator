@@ -8,7 +8,7 @@
 
 import type { ZodSchema, ZodType } from "zod";
 import type { AiProvider, StorageProvider } from "./providers.js";
-import type { StyleAnalysis } from "./types.js";
+import type { StyleAnalysis, DocumentIndex, PriorSectionContent } from "./types.js";
 import type { ChartConfig } from "./chartTypes.js";
 
 // ─── Supporting Types ──────────────────────────────────────────────────────
@@ -111,7 +111,8 @@ export interface DocumentTypeDefinition<TData = unknown> {
   getSectionPrompt(
     sectionType: string,
     data: TData,
-    style: StyleAnalysis | null
+    style: StyleAnalysis | null,
+    priorContent?: PriorSectionContent | null
   ): string;
 
   // ── Agents ────────────────────────────────────────────────────────────
@@ -211,4 +212,29 @@ export interface DocumentTypeDefinition<TData = unknown> {
     tenantId: string,
     s3Key: string
   ): Promise<StyleAnalysis>;
+
+  // ── Prior Document Deep Analysis ─────────────────────────────────────
+
+  /**
+   * Index the prior document's table of contents and section structure.
+   * Returns a structured map of sections with page ranges.
+   */
+  indexPriorDocument?(
+    ai: AiProvider,
+    storage: StorageProvider,
+    tenantId: string,
+    s3Key: string
+  ): Promise<DocumentIndex>;
+
+  /**
+   * Extract content from each section of the prior document.
+   * Runs per-section using the page ranges from the DocumentIndex.
+   */
+  extractPriorContent?(
+    ai: AiProvider,
+    storage: StorageProvider,
+    tenantId: string,
+    s3Key: string,
+    index: DocumentIndex
+  ): Promise<Map<string, PriorSectionContent>>;
 }

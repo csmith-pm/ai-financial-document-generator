@@ -8,7 +8,7 @@
 
 import type { EngineContext } from "../context.js";
 import type { DocumentTypeDefinition, SectionOutput } from "../doc-type.js";
-import type { StyleAnalysis } from "../types.js";
+import type { StyleAnalysis, DocumentIndex, PriorSectionContent } from "../types.js";
 
 // ─── Pipeline State ──────────────────────────────────────────────────────
 
@@ -21,6 +21,10 @@ export interface PipelineState {
   document: Record<string, unknown> | null;
   /** Style analysis from prior document (set by analyze-style step) */
   styleAnalysis: StyleAnalysis | null;
+  /** Structured index of prior document sections (set by index-prior-document step) */
+  documentIndex: DocumentIndex | null;
+  /** Extracted content from prior document sections, keyed by sectionType (set by extract-prior-content step) */
+  priorContent: Map<string, PriorSectionContent>;
   /** Parsed document data matching the doc type's schema (set by fetch-data step) */
   documentData: unknown;
   /** Generated sections (set by generate-sections, updated by revise) */

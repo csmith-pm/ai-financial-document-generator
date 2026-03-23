@@ -74,6 +74,8 @@ export function createInitialState(overrides?: Partial<PipelineState>): Pipeline
   return {
     document: null,
     styleAnalysis: null,
+    documentIndex: null,
+    priorContent: new Map(),
     documentData: null,
     sections: [],
     fiscalYear: new Date().getFullYear(),
