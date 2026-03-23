@@ -27,7 +27,7 @@ export async function createServer(config: ServerConfig) {
   });
 
   await app.register(multipart, {
-    limits: { fileSize: 50 * 1024 * 1024 }, // 50 MB
+    limits: { fileSize: 100 * 1024 * 1024 }, // 100 MB
   });
 
   // Auth middleware for /api routes
