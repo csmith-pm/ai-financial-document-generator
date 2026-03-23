@@ -25,6 +25,7 @@ export { mergeSectionListStep } from "./steps/merge-section-list.js";
 export { fetchDataStep } from "./steps/fetch-data.js";
 export { detectGapsStep } from "./steps/detect-gaps.js";
 export { generateSectionsStep } from "./steps/generate-sections.js";
+export { composeSectionsStep } from "./steps/compose-sections.js";
 export { renderChartsStep } from "./steps/render-charts.js";
 export { reviewAndIterateStep } from "./steps/review-and-iterate.js";
 export { renderOutputStep } from "./steps/render-output.js";
@@ -41,6 +42,7 @@ import { mergeSectionListStep } from "./steps/merge-section-list.js";
 import { fetchDataStep } from "./steps/fetch-data.js";
 import { detectGapsStep } from "./steps/detect-gaps.js";
 import { generateSectionsStep } from "./steps/generate-sections.js";
+import { composeSectionsStep } from "./steps/compose-sections.js";
 import { renderChartsStep } from "./steps/render-charts.js";
 import { reviewAndIterateStep } from "./steps/review-and-iterate.js";
 import { renderOutputStep } from "./steps/render-output.js";
@@ -58,10 +60,11 @@ import { finalizeStep } from "./steps/finalize.js";
  *  6. Fetch/parse document data
  *  7. Detect data gaps → create todos
  *  8. Generate sections (rewrite from prior + new data, or generate from scratch)
- *  9. Render charts + persist sections
- * 10. Review and iterate (loop with revision)
- * 11. Render final output (PDF)
- * 12. Finalize (set status based on open todos)
+ *  9. Compose sections into LayoutSpecs (skipped if no composerAgentType)
+ * 10. Render charts + persist sections (skipped if composer active)
+ * 11. Review and iterate (loop with revision)
+ * 12. Render final output (PDF)
+ * 13. Finalize (set status based on open todos)
  */
 export function buildDefaultPipeline(): PipelineStep[] {
   return [
@@ -73,6 +76,7 @@ export function buildDefaultPipeline(): PipelineStep[] {
     fetchDataStep,
     detectGapsStep,
     generateSectionsStep,
+    composeSectionsStep,
     renderChartsStep,
     reviewAndIterateStep,
     renderOutputStep,

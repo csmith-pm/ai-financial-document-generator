@@ -53,6 +53,12 @@ export const renderChartsStep: PipelineStep = {
 
   async execute(pCtx: PipelineContext): Promise<StepResult> {
     const { ctx, docType, documentId, state } = pCtx;
+
+    // Skip when Composer agent handles visuals via LayoutSpec
+    if (docType.composerAgentType && state.layoutSpec) {
+      return { status: "skipped", message: "Visuals handled by Composer agent via LayoutSpec" };
+    }
+
     const allSectionSpecs = docType.sectionTypes;
 
     await updateJobStatus(
