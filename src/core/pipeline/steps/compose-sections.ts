@@ -17,6 +17,7 @@ import type { SectionOutput } from "../../doc-type.js";
 import type { PriorSectionContent } from "../../types.js";
 import type { LayoutEntry, SectionLayoutSpec, DocumentLayoutSpec, ComponentStyles } from "../../components/types.js";
 import { defaultComponentRegistry, ComponentRegistry } from "../../components/registry.js";
+import { createComponent, loadCustomComponents } from "../../components/creator.js";
 import { buildAgentPrompt } from "../../agents/index.js";
 import { updateJobStatus } from "../executor.js";
 
@@ -112,11 +113,16 @@ export const composeSectionsStep: PipelineStep = {
 
     await updateJobStatus(ctx.db, documentId, "compose_sections", "running", 0, "Composing section layouts...");
 
-    // Load component registry
-    // Import built-ins to ensure they're registered
+    // Load component registry — built-ins + any custom from DB
     await import("../../components/built-in/index.js");
     const registry = defaultComponentRegistry;
     state.componentRegistry = registry;
+
+    // Load custom (AI-generated) components from DB
+    const customLoaded = await loadCustomComponents(ctx.db, registry, ctx.tenantId);
+    if (customLoaded > 0) {
+      console.log(`[compose] Loaded ${customLoaded} custom component(s) from DB`);
+    }
 
     const availableComponents = registry.list().map((c) => `${c.id} (${c.category})`);
 
@@ -164,8 +170,16 @@ export const composeSectionsStep: PipelineStep = {
 
           if (e.componentId === "__missing__") {
             missingCount++;
-            // Keep __missing__ entries — Phase 5 Component Creator handles them
-            validEntries.push(e);
+            // Try to create the missing component on the fly
+            const description = String(e.props?.description ?? "Unknown visual element");
+            try {
+              const newId = await createComponent(ctx.ai, ctx.db, registry, description, ctx.tenantId);
+              console.log(`[compose] Created new component "${newId}" for: ${description.slice(0, 80)}`);
+              validEntries.push({ ...e, componentId: newId });
+            } catch (createErr) {
+              console.warn(`[compose] Failed to create component: ${createErr}`);
+              validEntries.push(e); // Keep __missing__ as fallback
+            }
           } else if (registry.has(e.componentId)) {
             // Validate props against component schema
             const comp = registry.get(e.componentId);

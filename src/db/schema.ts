@@ -118,6 +118,7 @@ export const documentSections = pgTable(
     tableData: jsonb("table_data").$type<Record<string, unknown>[]>(),
     chartConfigs: jsonb("chart_configs").$type<Record<string, unknown>[]>(),
     chartImageS3Keys: jsonb("chart_image_s3_keys").$type<string[]>(),
+    layoutSpec: jsonb("layout_spec").$type<Record<string, unknown>>(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },
@@ -235,6 +236,53 @@ export const documentTodos = pgTable(
   (table) => [
     index("document_todo_doc_idx").on(table.documentId),
     index("document_todo_status_idx").on(table.documentId, table.status),
+  ]
+);
+
+// ---- Visual Components (AI-generated, persisted) ----
+
+export const visualComponents = pgTable(
+  "visual_components",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    componentId: text("component_id").notNull().unique(),
+    version: text("version").notNull().default("1.0.0"),
+    name: text("name").notNull(),
+    description: text("description"),
+    category: text("category").notNull(),
+    propsSchema: jsonb("props_schema")
+      .notNull()
+      .$type<Record<string, unknown>>(),
+    renderHtmlSource: text("render_html_source").notNull(),
+    renderPdfSource: text("render_pdf_source").notNull(),
+    tenantId: text("tenant_id"),
+    builtIn: boolean("built_in").notNull().default(false),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("visual_component_id_idx").on(table.componentId),
+    index("visual_component_tenant_idx").on(table.tenantId),
+  ]
+);
+
+// ---- Section Layout Specs ----
+
+export const sectionLayoutSpecs = pgTable(
+  "section_layout_specs",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    documentId: uuid("document_id")
+      .notNull()
+      .references(() => documents.id, { onDelete: "cascade" }),
+    sectionType: text("section_type").notNull(),
+    layoutSpec: jsonb("layout_spec")
+      .notNull()
+      .$type<Record<string, unknown>>(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("section_layout_doc_idx").on(table.documentId),
   ]
 );
 

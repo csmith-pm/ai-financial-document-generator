@@ -7,6 +7,7 @@
  */
 
 export { ComponentRegistry, defaultComponentRegistry } from "./registry.js";
+export { createComponent, loadCustomComponents } from "./creator.js";
 export type {
   ComponentDefinition,
   ComponentCategory,
