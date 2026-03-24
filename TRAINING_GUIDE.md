@@ -306,3 +306,43 @@ Lower temperatures produce more consistent output but less variety. If all gener
 - **Add a new reviewer** when you have a distinct compliance standard or quality dimension that isn't covered (e.g., adding a plain-language reviewer for citizen-facing documents)
 - **Modify existing prompts** when the reviewer is covering the right dimension but scoring incorrectly or providing unhelpful feedback
 - **Add seed skills** when the creator agent consistently misses something that the reviewer catches — skills bridge the gap faster than prompt changes
+
+---
+
+## Training Specialized Agents
+
+### Training the Composer Agent
+
+The Composer agent (`bb_composer`) produces LayoutSpecs that arrange components into section layouts. Training focuses on:
+
+1. **Component selection** — Does the Composer choose the right component for the data? (e.g., pie chart for proportional data, bar chart for comparisons)
+2. **Layout fidelity** — Does the LayoutSpec match the prior year's visual structure?
+3. **Props accuracy** — Are component props correctly mapped from Creator output?
+
+Use the workbench to compare Composer output against the prior-year document's indexed sections. The eval system (`npx tsx evals/run.ts evals/fixtures/bristol-fy27`) generates reports that score layout quality.
+
+Composer skills are stored in categories: `layout`, `visual_design`, `component_selection`.
+
+### Training the Component Creator
+
+When the Composer encounters a visual element not in the Component Library (e.g., organizational chart, waterfall chart), the Component Creator generates a new component definition. Training this agent:
+
+1. Review generated components in the `visual_components` DB table
+2. Test rendering in both HTML (web preview) and PDF output
+3. Check accessibility (aria-labels, semantic HTML, color contrast)
+4. Components persist across documents — a good org-chart component benefits all future documents
+
+### Eval-Based Training Workflow
+
+The eval system provides objective scores for each generation run:
+
+```bash
+npx tsx evals/run.ts evals/fixtures/bristol-fy27
+# Output: evals/fixtures/bristol-fy27/output/report.md
+```
+
+The report includes GFOA scores, ADA scores, section coverage, and specific recommendations. Use it to:
+1. Run a baseline eval
+2. Tune agent prompts or skill seeds
+3. Re-run eval and compare scores
+4. Iterate until scores improve

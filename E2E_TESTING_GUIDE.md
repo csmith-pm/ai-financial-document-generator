@@ -338,3 +338,67 @@ npx playwright install
 2. Database is running: `docker-compose ps`
 3. Migrations applied: `pnpm db:push`
 4. Environment variables set
+
+---
+
+## Evaluation Testing
+
+The eval system provides automated end-to-end testing against real document fixtures:
+
+```bash
+# Run the Bristol FY27 budget book evaluation
+npx tsx evals/run.ts evals/fixtures/bristol-fy27
+```
+
+**What it does:**
+1. Creates a document with the fixture's Excel data and prior-year PDF
+2. Runs the full 14-step pipeline (seed → analyze → index → extract → merge → fetch → gaps → generate → compose → charts → review → render → finalize)
+3. Scores the output against GFOA and ADA criteria
+4. Compares generated document against the prior-year PDF (section count, estimated pages)
+5. Produces a markdown report at `evals/fixtures/<name>/output/report.md`
+
+**Report includes:**
+- Pipeline execution table (step, duration, status, message)
+- GFOA review scores by category
+- ADA accessibility results
+- Document comparison metrics
+- Data quality checks
+- Letter grade (A-F) with recommendations
+
+**Adding new eval fixtures:**
+1. Create `evals/fixtures/<name>/` directory
+2. Add `config.json` with doc type, fiscal year, tenant ID
+3. Add `data.xlsx` (budget data) and optionally `prior.pdf`
+4. Run: `npx tsx evals/run.ts evals/fixtures/<name>`
+
+---
+
+## Testing the Component Pipeline
+
+The compose-sections step (step 9) is testable via unit tests:
+- `tests/milestone-15/compose-sections.test.ts` — Composer agent mock, LayoutSpec validation, fallback behavior
+- `tests/milestone-15/component-creator.test.ts` — Dynamic component generation, DB persistence safety
+- `tests/milestone-15/component-registry.test.ts` — Registry register/get/has/list operations
+- `tests/milestone-15/built-in-components.test.ts` — All 10 built-in components register and validate props
+
+---
+
+## Updated Pipeline Steps for Progress Monitoring
+
+When monitoring document generation progress, the pipeline now reports these 14 steps:
+
+| Step | ID | Description |
+|------|----|-------------|
+| 1 | seed_skills | Load skill seeds |
+| 2 | analyze_prior_pdf | Extract prior document style |
+| 3 | index_prior_document | Map prior document sections |
+| 4 | extract_prior_content | Extract section content from prior PDF |
+| 5 | merge_section_list | Combine standard + custom sections |
+| 6 | fetch_data | Parse Excel/data source |
+| 7 | detect_gaps | Find missing data, create todos |
+| 8 | generate_sections | Creator agent generates content |
+| 9 | compose_sections | Composer agent produces LayoutSpecs |
+| 10 | render_charts | Render chart PNGs (skipped with Composer) |
+| 11 | review_and_iterate | Score + revise loop |
+| 12 | render_pdf | Assemble final PDF |
+| 13 | finalize | Set completion status |

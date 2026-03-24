@@ -63,17 +63,19 @@ pnpm db:migrate    # Apply migrations
 
 ### Schema Overview
 
-The engine manages 7 tables:
+The engine manages 9 tables:
 
 | Table | Purpose |
 |-------|---------|
 | `documents` | Top-level document records (title, fiscal year, status, docType, config) |
-| `document_sections` | Generated section content (narrative, tables, charts) |
+| `document_sections` | Generated section content (narrative, tables, charts). Now includes a `layout_spec` JSONB column for Composer output |
 | `document_reviews` | Review results per reviewer per iteration |
 | `document_jobs` | Job progress tracking for each pipeline step |
 | `agent_skills` | Self-improving skill system (seeds + learned skills) |
 | `document_todos` | Action items from data gaps and review findings |
 | `document_todo_messages` | Chat history between users and the AI advisor |
+| `visual_components` | AI-generated component definitions (component_id, version, name, category, props_schema, render_html_source, render_pdf_source, tenant_id, built_in) |
+| `section_layout_specs` | Layout specs per document section (document_id, section_type, layout_spec jsonb) |
 
 All tables use `tenant_id` for multi-tenant isolation. No external foreign keys — the engine is fully self-contained.
 
@@ -291,16 +293,19 @@ POST /api/documents/:id/generate
 Enqueues the generation job. Returns `202 Accepted`. Only works from `"draft"` or `"failed"` status.
 
 The worker picks up the job and runs the full orchestration pipeline:
-1. Seed global skills (idempotent)
-2. Analyze prior-year document for style
-3. Fetch/parse document data
-4. Detect data gaps and create todos
-5. Generate all sections using the creator agent
-6. Render charts (Puppeteer + Recharts)
-7. Run all reviewers in parallel
-8. Extract learned skills from reviews
-9. Revise sections based on feedback (with plateau detection)
-10. Render final PDF and set status
+1. Seed Skills
+2. Analyze Prior Document
+3. Index Prior Document
+4. Extract Prior Content
+5. Merge Section List
+6. Fetch Data
+7. Detect Data Gaps
+8. Generate Sections
+9. Compose Sections
+10. Render Charts (skipped when Composer active)
+11. Review & Iterate
+12. Render Output
+13. Finalize
 
 #### Regenerate
 
@@ -494,7 +499,21 @@ pnpm check    # tsc --noEmit && vitest run
 
 ---
 
-## 11. Troubleshooting
+## 11. Eval System
+
+The engine includes an automated evaluation framework for end-to-end testing of the generation pipeline against fixture data.
+
+```bash
+npx tsx evals/run.ts evals/fixtures/bristol-fy27  # Run Bristol FY27 evaluation
+```
+
+Reports are written to `evals/fixtures/<name>/output/report.md`. Each report includes pipeline execution details, review scores, document comparison, a letter grade (A-F), and actionable recommendations.
+
+Fixture directories contain the input data (Excel file + prior-year PDF) needed to run the full pipeline without external dependencies.
+
+---
+
+## 12. Troubleshooting
 
 | Symptom | Fix |
 |---------|-----|

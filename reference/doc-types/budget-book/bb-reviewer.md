@@ -100,3 +100,19 @@ Produce a JSON report:
 - A section that addresses all primary questions but briefly scores higher than one that addresses some questions in great detail
 - Charts and tables count toward scoring only if they have descriptive context
 - The threshold is 100 points — be honest but fair
+
+### Condensed Review Payloads
+
+Reviewer prompts now send condensed section data to prevent API connection errors:
+- Narrative text capped at 3,000 characters per section
+- Table data limited to 3 sample rows per table
+- Chart configs sent as metadata only (type, title, data key count)
+
+This eliminates the 500KB+ request bodies that previously caused connection resets with 23+ section documents.
+
+### LayoutSpec Awareness
+
+When the Component Library is active, reviewers receive LayoutSpec information alongside content. This enables:
+- Scoring visual layout decisions (component ordering, page breaks)
+- Checking that chart types match the data being presented
+- Verifying component diversity (not all narrative, not all charts)

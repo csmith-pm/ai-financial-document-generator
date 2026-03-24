@@ -112,3 +112,20 @@ Consult `skills/budget-book/references/ada-wcag-checklist.md` to ensure:
 Before starting generation, read:
 - `skills/budget-book/references/style-patterns.md` — What has worked well in past generations
 - `skills/budget-book/references/common-issues.md` — What issues were encountered and how they were resolved
+
+### Composer Integration
+
+The Creator's output now feeds into the Composer agent (step 9), which arranges content into visual layouts using the Component Library. The Creator produces:
+- `narrativeContent` — prose text for narrative-block components
+- `tableData` — structured rows for financial-table components
+- `chartConfigs` — data + type for chart components
+
+The Composer references these by mapping them to LayoutSpec entries with component IDs and props.
+
+### Rewriter Pattern
+
+When prior-year content is available (from the Extractor), the Creator operates in rewrite mode:
+- Uses prior narrative as a template for tone, style, and structure
+- Updates financial figures from the new fiscal year's data
+- Preserves the municipality's voice and branding choices
+- Falls back to generation-from-scratch when no prior content exists
