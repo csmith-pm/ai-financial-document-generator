@@ -8,7 +8,7 @@
 
 import type { ZodSchema, ZodType } from "zod";
 import type { AiProvider, StorageProvider } from "./providers.js";
-import type { StyleAnalysis } from "./types.js";
+import type { StyleAnalysis, DocumentIndex, PriorSectionContent } from "./types.js";
 import type { ChartConfig } from "./chartTypes.js";
 
 // ─── Supporting Types ──────────────────────────────────────────────────────
@@ -111,7 +111,8 @@ export interface DocumentTypeDefinition<TData = unknown> {
   getSectionPrompt(
     sectionType: string,
     data: TData,
-    style: StyleAnalysis | null
+    style: StyleAnalysis | null,
+    priorContent?: PriorSectionContent | null
   ): string;
 
   // ── Agents ────────────────────────────────────────────────────────────
@@ -139,6 +140,14 @@ export interface DocumentTypeDefinition<TData = unknown> {
 
   /** Agent type used for conversational todo chat */
   advisorAgentType: string;
+
+  /**
+   * Agent type used for visual layout composition. If set, the
+   * compose-sections pipeline step produces a LayoutSpec from the
+   * component library instead of relying on the fixed Recharts
+   * chart pipeline. If undefined, legacy rendering is used.
+   */
+  composerAgentType?: string;
 
   // ── Iteration Control ───────────────────────────────────────────────
 
@@ -211,4 +220,29 @@ export interface DocumentTypeDefinition<TData = unknown> {
     tenantId: string,
     s3Key: string
   ): Promise<StyleAnalysis>;
+
+  // ── Prior Document Deep Analysis ─────────────────────────────────────
+
+  /**
+   * Index the prior document's table of contents and section structure.
+   * Returns a structured map of sections with page ranges.
+   */
+  indexPriorDocument?(
+    ai: AiProvider,
+    storage: StorageProvider,
+    tenantId: string,
+    s3Key: string
+  ): Promise<DocumentIndex>;
+
+  /**
+   * Extract content from each section of the prior document.
+   * Runs per-section using the page ranges from the DocumentIndex.
+   */
+  extractPriorContent?(
+    ai: AiProvider,
+    storage: StorageProvider,
+    tenantId: string,
+    s3Key: string,
+    index: DocumentIndex
+  ): Promise<Map<string, PriorSectionContent>>;
 }

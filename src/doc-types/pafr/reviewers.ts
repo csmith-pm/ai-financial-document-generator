@@ -20,16 +20,19 @@ export const PAFR_QUALITY_REVIEWER: ReviewerSpec = {
   resultSchema: pafrReviewResultSchema,
 
   buildReviewPrompt(sections: SectionOutput[]): string {
-    const sectionSummary = sections.map((s) => ({
+    const condensed = sections.map((s) => ({
       type: s.sectionType,
       title: s.title,
-      narrativeLength: s.narrativeContent.length,
+      narrative: s.narrativeContent.length > 3000
+        ? s.narrativeContent.substring(0, 3000) + "… [truncated]"
+        : s.narrativeContent,
       tableRowCount: s.tableData.length,
+      tableSample: s.tableData.slice(0, 3),
       chartCount: s.chartConfigs.length,
-      narrativePreview: s.narrativeContent.substring(0, 500),
+      chartTypes: s.chartConfigs.map((c) => c.type ?? "unknown"),
     }));
 
-    return `Review this Popular Annual Financial Report with ${sections.length} sections:\n${JSON.stringify(sectionSummary, null, 2)}\n\nFull section content:\n${JSON.stringify(sections, null, 2)}\n\nOutput format:\n{\n  "scores": [{"category": "...", "maxPoints": N, "awardedPoints": N, "feedback": "..."}],\n  "totalScore": N,\n  "passed": true/false,\n  "recommendations": [{"section": "...", "priority": "high|medium|low", "issue": "...", "suggestion": "..."}]\n}`;
+    return `Review this Popular Annual Financial Report with ${sections.length} sections.\n\nSection content:\n${JSON.stringify(condensed, null, 2)}\n\nScore against PAFR quality criteria. Output format:\n{\n  "scores": [{"category": "...", "maxPoints": N, "awardedPoints": N, "feedback": "..."}],\n  "totalScore": N,\n  "passed": true/false,\n  "recommendations": [{"section": "...", "priority": "high|medium|low", "issue": "...", "suggestion": "..."}]\n}`;
   },
 
   isPassed(result: unknown): boolean {
@@ -63,7 +66,22 @@ export const PAFR_ADA_REVIEWER: ReviewerSpec = {
   resultSchema: adaReviewResultSchema,
 
   buildReviewPrompt(sections: SectionOutput[]): string {
-    return `Check accessibility for this Popular Annual Financial Report:\n${JSON.stringify(sections, null, 2)}\n\nPAFRs often include infographics and visual elements — pay special attention to alt text for visual content.\n\nOutput format:\n{\n  "pdfIssues": [{"rule": "WCAG X.X.X Name", "severity": "critical|major|minor", "location": "...", "description": "...", "fix": "..."}],\n  "webIssues": [{"rule": "WCAG X.X.X Name", "severity": "critical|major|minor", "location": "...", "description": "...", "fix": "..."}],\n  "passed": true/false\n}`;
+    const condensed = sections.map((s) => ({
+      type: s.sectionType,
+      title: s.title,
+      narrative: s.narrativeContent.length > 3000
+        ? s.narrativeContent.substring(0, 3000) + "… [truncated]"
+        : s.narrativeContent,
+      tableRowCount: s.tableData.length,
+      hasTableHeaders: s.tableData.length > 0,
+      chartCount: s.chartConfigs.length,
+      charts: s.chartConfigs.map((c) => ({
+        type: c.type,
+        altText: (c as unknown as Record<string, unknown>).altText ?? null,
+      })),
+    }));
+
+    return `Check accessibility (WCAG 2.1 AA) for this Popular Annual Financial Report with ${sections.length} sections.\n\nPAFRs often include infographics and visual elements — pay special attention to alt text for visual content.\n\nSection content:\n${JSON.stringify(condensed, null, 2)}\n\nOutput format:\n{\n  "pdfIssues": [{"rule": "WCAG X.X.X Name", "severity": "critical|major|minor", "location": "...", "description": "...", "fix": "..."}],\n  "webIssues": [{"rule": "WCAG X.X.X Name", "severity": "critical|major|minor", "location": "...", "description": "...", "fix": "..."}],\n  "passed": true/false\n}`;
   },
 
   isPassed(result: unknown): boolean {

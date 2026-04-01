@@ -5,3 +5,5 @@ drizzle/
 *.tgz
 *.log
 .DS_Store
+storage/
+evals/fixtures/*/output/

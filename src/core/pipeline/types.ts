@@ -7,8 +7,10 @@
  */
 
 import type { EngineContext } from "../context.js";
-import type { DocumentTypeDefinition, SectionOutput } from "../doc-type.js";
-import type { StyleAnalysis } from "../types.js";
+import type { DocumentTypeDefinition, SectionOutput, SectionTypeSpec } from "../doc-type.js";
+import type { StyleAnalysis, DocumentIndex, PriorSectionContent } from "../types.js";
+import type { DocumentLayoutSpec } from "../components/types.js";
+import type { ComponentRegistry } from "../components/registry.js";
 
 // ─── Pipeline State ──────────────────────────────────────────────────────
 
@@ -21,6 +23,12 @@ export interface PipelineState {
   document: Record<string, unknown> | null;
   /** Style analysis from prior document (set by analyze-style step) */
   styleAnalysis: StyleAnalysis | null;
+  /** Structured index of prior document sections (set by index-prior-document step) */
+  documentIndex: DocumentIndex | null;
+  /** Extracted content from prior document sections, keyed by sectionType (set by extract-prior-content step) */
+  priorContent: Map<string, PriorSectionContent>;
+  /** Effective section list — merged from doc type + prior PDF index (set by merge-section-list step) */
+  effectiveSections: SectionTypeSpec[];
   /** Parsed document data matching the doc type's schema (set by fetch-data step) */
   documentData: unknown;
   /** Generated sections (set by generate-sections, updated by revise) */
@@ -35,6 +43,10 @@ export interface PipelineState {
   maxIterations: number;
   /** Previous scores keyed by reviewer ID (managed by review-and-iterate step) */
   previousScores: Map<string, number | null>;
+  /** Layout spec produced by the Composer agent (set by compose-sections step) */
+  layoutSpec: DocumentLayoutSpec | null;
+  /** Component registry with built-in + dynamic components (set by compose-sections step) */
+  componentRegistry: ComponentRegistry | null;
 }
 
 // ─── Pipeline Context ────────────────────────────────────────────────────

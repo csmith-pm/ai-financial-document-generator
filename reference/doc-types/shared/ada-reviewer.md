@@ -104,3 +104,14 @@ Produce a JSON report:
 - **Fail**: Any critical OR major issues remain
 
 Be thorough. A budget book that fails accessibility review cannot be published, as municipalities must comply with ADA requirements for public documents.
+
+### AI-Generated Component Accessibility
+
+When the Component Creator generates new components, the ADA reviewer checks:
+- SVG charts have `aria-label` attributes
+- Tables use semantic `<th scope="col">` and `<th scope="row">`
+- Color contrast meets WCAG 2.1 AA (4.5:1 for text, 3:1 for large text)
+- No `<script>` tags in generated HTML
+- Font sizes are readable (minimum 12px body text)
+
+Components that fail accessibility checks produce specific feedback that the Creator uses for revision in subsequent iterations.

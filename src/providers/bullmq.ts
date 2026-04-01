@@ -16,7 +16,8 @@ export class BullMQQueueProvider implements QueueProvider {
   private queueName: string;
   private concurrency: number;
   private lockDuration: number;
-  private workers: Worker[] = [];
+  private handlers = new Map<string, (payload: Record<string, unknown>) => Promise<void>>();
+  private worker: Worker | null = null;
 
   constructor(config: BullMQQueueProviderConfig) {
     this.redisUrl = config.redisUrl;
@@ -41,12 +42,24 @@ export class BullMQQueueProvider implements QueueProvider {
     jobType: string,
     handler: (payload: Record<string, unknown>) => Promise<void>
   ): void {
-    const worker = new Worker(
+    this.handlers.set(jobType, handler);
+    this.ensureWorker();
+  }
+
+  private ensureWorker(): void {
+    // Close existing worker so we can recreate with updated handlers
+    if (this.worker) {
+      void this.worker.close();
+    }
+
+    this.worker = new Worker(
       this.queueName,
       async (job) => {
-        if (job.name === jobType) {
-          await handler(job.data as Record<string, unknown>);
+        const handler = this.handlers.get(job.name);
+        if (!handler) {
+          throw new Error(`No handler registered for job type: ${job.name}`);
         }
+        await handler(job.data as Record<string, unknown>);
       },
       {
         connection: { url: this.redisUrl },
@@ -54,11 +67,12 @@ export class BullMQQueueProvider implements QueueProvider {
         lockDuration: this.lockDuration,
       }
     );
-    this.workers.push(worker);
   }
 
   async shutdown(): Promise<void> {
-    await Promise.all(this.workers.map((w) => w.close()));
+    if (this.worker) {
+      await this.worker.close();
+    }
     await this.queue.close();
   }
 }

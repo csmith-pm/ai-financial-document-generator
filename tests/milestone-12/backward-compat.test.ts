@@ -28,13 +28,16 @@ describe("Core exports: index.ts", () => {
     expect(typeof mod.runPipeline).toBe("function");
   });
 
-  it("buildDefaultPipeline returns 9 steps", async () => {
+  it("buildDefaultPipeline returns 12 steps", async () => {
     const mod = await import("../../src/index.js");
     const pipeline = mod.buildDefaultPipeline();
-    expect(pipeline).toHaveLength(9);
+    expect(pipeline).toHaveLength(12);
     expect(pipeline.map((s: { id: string }) => s.id)).toEqual([
       "seed_skills",
       "analyze_prior_pdf",
+      "index_prior_document",
+      "extract_prior_content",
+      "merge_section_list",
       "fetch_data",
       "detect_gaps",
       "generate_sections",

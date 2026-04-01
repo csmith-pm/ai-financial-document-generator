@@ -8,7 +8,7 @@
 
 import type { DocumentTypeDefinition, SectionOutput, ReviewerSpec } from "../../core/doc-type.js";
 import type { AiProvider, StorageProvider } from "../../core/providers.js";
-import type { StyleAnalysis } from "../../core/types.js";
+import type { StyleAnalysis, DocumentIndex, PriorSectionContent } from "../../core/types.js";
 import type { DrizzleInstance } from "../../db/connection.js";
 
 import type { BudgetBookData } from "./data-types.js";
@@ -26,6 +26,8 @@ import { CATEGORY_PRIORITY } from "./category-priority.js";
 import { detectDataGaps } from "./detector.js";
 import { renderBudgetBookPdf } from "./pdf/renderer.js";
 import { analyzePriorYearPdf } from "./pdf/analyzer.js";
+import { indexPriorBudgetBook } from "./pdf/indexer.js";
+import { extractPriorBudgetBookContent } from "./pdf/extractor.js";
 import { parseExcelBudget } from "./excel-parser.js";
 import {
   extractSkillsFromGfoaReview,
@@ -64,9 +66,10 @@ export const budgetBookDocType: DocumentTypeDefinition<BudgetBookData> = {
   getSectionPrompt(
     sectionType: string,
     data: BudgetBookData,
-    style: StyleAnalysis | null
+    style: StyleAnalysis | null,
+    priorContent?: PriorSectionContent | null
   ): string {
-    return getSectionPrompt(sectionType, data, style);
+    return getSectionPrompt(sectionType, data, style, priorContent);
   },
 
   // ── Agents ────────────────────────────────────────────────────────────
@@ -205,5 +208,24 @@ export const budgetBookDocType: DocumentTypeDefinition<BudgetBookData> = {
     s3Key: string
   ): Promise<StyleAnalysis> {
     return analyzePriorYearPdf(ai, storage, tenantId, s3Key);
+  },
+
+  async indexPriorDocument(
+    ai: AiProvider,
+    storage: StorageProvider,
+    tenantId: string,
+    s3Key: string
+  ): Promise<DocumentIndex> {
+    return indexPriorBudgetBook(ai, storage, tenantId, s3Key);
+  },
+
+  async extractPriorContent(
+    ai: AiProvider,
+    storage: StorageProvider,
+    tenantId: string,
+    s3Key: string,
+    index: DocumentIndex
+  ): Promise<Map<string, PriorSectionContent>> {
+    return extractPriorBudgetBookContent(ai, storage, tenantId, s3Key, index);
   },
 };

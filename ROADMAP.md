@@ -17,6 +17,8 @@ Restructuring the document engine from a single-purpose budget book generator in
 | 4 | Generic API + Entry Points | ✅ Done | `feature/phase-4-generic-api` | — | Generic `/api/documents` routes, `createDocumentEngine()` factory, generic worker jobs |
 | 5 | Training Workbench | ✅ Done | `feature/phase-5-workbench` | #6 merged | Dev routes + CLI for agent training and iteration |
 | 6 | Second Document Type (PAFR) | ✅ Done | `feature/phase-6-pafr` | #7 | PAFR doc type, generic pipeline decoupling, shared ADA reviewer |
+| 7 | Deep Prior-Document Analysis + Excel Parser Refactor | ✅ Done | `feature/phase-7-prior-doc` | #8 | Prior PDF indexer/extractor, rewriter pattern, dynamic sections, two-phase Excel parser, eval system |
+| 8 | Component Library + Composer Agent | ✅ Done | `feature/phase-8-components` | #9 | Component registry, 10 built-in components, Composer agent, Component Creator, direct DOM rendering |
 
 ---
 
@@ -124,9 +126,27 @@ Restructuring the document engine from a single-purpose budget book generator in
 
 ---
 
+### Phase 7: Deep Prior-Document Analysis + Excel Parser Refactor
+- **Indexer**: Reads cover, TOC, and content pages to build structured section map with page ranges
+- **Extractor**: Extracts narrative, tables, chart descriptions per indexed section via vision API
+- **Rewriter pattern**: Creator rewrites from prior content + new data instead of generating from scratch
+- **Dynamic section list**: Merge standard + custom sections from prior PDF (discovered 23 total vs 11 hardcoded for Bristol)
+- **Two-phase Excel parser**: AI maps columns (small call), code aggregates all rows programmatically
+- **Eval system**: Automated end-to-end testing with Bristol FY27 fixture, markdown reports with grades
+
+### Phase 8: Component Library + Composer Agent
+- **Component Registry**: Pluggable visual components with Zod-validated props, dual renderers (HTML + PDF)
+- **10 built-in components**: narrative-block, financial-table, 5 chart types, stat-card, cover-page, toc
+- **Composer Agent**: Produces LayoutSpecs (~500 tokens/section vs ~5000 for raw HTML = 90% token savings)
+- **Component Creator**: AI generates new components on-the-fly for novel visuals, persists to DB for reuse
+- **Direct DOM rendering**: UI preview renders components in React tree (no iframes)
+- **Pipeline fixes**: Condensed reviewer payloads, explicit Anthropic timeout/retry config, error cause preservation
+
+---
+
 ## Remaining Phases
 
-_(No phases currently planned — all 7 original phases complete.)_
+_(No phases currently planned — all 9 original phases complete.)_
 
 ---
 
@@ -138,8 +158,8 @@ _(No phases currently planned — all 7 original phases complete.)_
 | `src/core/doc-type-registry.ts` | `DocumentTypeRegistry` — runtime registry of available doc types |
 | `src/core/pipeline/types.ts` | `PipelineStep`, `PipelineContext`, `PipelineState` interfaces |
 | `src/core/pipeline/executor.ts` | `runPipeline()` — sequential step runner with error handling |
-| `src/core/pipeline/index.ts` | `buildDefaultPipeline()` — returns the 9 ordered steps |
-| `src/core/pipeline/steps/` | 9 individual step implementations |
+| `src/core/pipeline/index.ts` | `buildDefaultPipeline()` — returns the 13 ordered steps |
+| `src/core/pipeline/steps/` | 13 individual step implementations |
 | `src/core/orchestrator.ts` | Thin wrapper: loads doc, resolves type, runs pipeline |
 | `src/core/providers.ts` | Provider interfaces (AI, Storage, Data, Queue) |
 | `src/core/context.ts` | `EngineContext` — runtime context passed through pipeline |
@@ -158,17 +178,21 @@ _(No phases currently planned — all 7 original phases complete.)_
 
 ## Pipeline Steps (in order)
 
-The 9 default pipeline steps run sequentially:
+The 13 pipeline steps run sequentially:
 
 1. **seed_skills** — Idempotent seeding of global skills from doc type
-2. **analyze_prior_pdf** — Analyze prior-year document for style continuity
-3. **fetch_data** — Load/parse document data (Excel upload or data provider)
-4. **detect_gaps** — Detect data gaps → create todos for user
-5. **generate_sections** — Generate all sections (parallel/sequential/structural batching)
-6. **render_charts** — Render chart images (Puppeteer + Recharts) and persist sections
-7. **review_and_iterate** — Review loop: run reviewers → check termination → revise → re-render (internal iteration)
-8. **render_pdf** — Render final PDF (@react-pdf/renderer) and upload to storage
-9. **finalize** — Set document status based on open todos
+2. **analyze_prior_document** — Extract visual style (colors, fonts, layout) from prior-year PDF via vision API
+3. **index_prior_document** — Read cover, TOC, and content pages to build structured section map with page ranges
+4. **extract_prior_content** — For each indexed section, extract narrative, tables, chart descriptions
+5. **merge_section_list** — Combine doc type's standard sections with custom sections discovered in prior PDF
+6. **fetch_data** — Two-phase Excel parsing: AI maps columns (small call), code aggregates all rows programmatically
+7. **detect_gaps** — Compare required data vs. available data, create todos for missing items
+8. **generate_sections** — Creator agent generates content (narratives, tables, chart configs) per section
+9. **compose_sections** — Composer agent produces LayoutSpec per section, referencing Component Library
+10. **render_charts** — Puppeteer + Recharts → PNG (skipped when Composer active)
+11. **review_and_iterate** — Review loop: run reviewers → check termination → revise → re-render (with plateau detection)
+12. **render_output** — Assemble final PDF (from LayoutSpec or legacy @react-pdf path)
+13. **finalize** — Set document status based on open todos
 
 ---
 

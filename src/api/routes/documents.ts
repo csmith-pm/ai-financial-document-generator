@@ -220,7 +220,8 @@ export async function documentRoutes(
       return;
     }
 
-    if (doc.status !== "draft" && doc.status !== "failed") {
+    const retryableStatuses = ["draft", "failed", "analyzing", "generating"];
+    if (!retryableStatuses.includes(doc.status!)) {
       reply
         .status(409)
         .send({ error: `Cannot generate from status "${doc.status}"` });

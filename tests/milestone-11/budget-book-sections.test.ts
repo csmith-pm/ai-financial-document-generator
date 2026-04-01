@@ -120,5 +120,66 @@ describe("BudgetBookDocType sections", () => {
       const prompt = budgetBookDocType.getSectionPrompt("revenue_summary", SAMPLE_DATA, null);
       expect(prompt).toContain("revenue_summary");
     });
+
+    it("uses generate-from-scratch when no priorContent", () => {
+      const prompt = budgetBookDocType.getSectionPrompt("revenue_summary", SAMPLE_DATA, null, null);
+      expect(prompt).toContain("Generate the");
+      expect(prompt).not.toContain("REWRITE");
+    });
+
+    it("uses rewriter pattern when priorContent is available", () => {
+      const priorContent = {
+        sectionType: "revenue_summary",
+        narrative: "Prior year revenue totaled $5.2M, a 3% increase over the prior year.",
+        tables: [{ title: "Revenue by Source", headers: ["Source", "Amount"], rows: [["Property Tax", "$3.1M"]] }],
+        chartDescriptions: [{ type: "bar", title: "Revenue Trends", description: "Bar chart showing revenue growth" }],
+        pageCount: 3,
+        keyFindings: ["Property tax is the primary revenue source at 60%"],
+      };
+
+      const prompt = budgetBookDocType.getSectionPrompt("revenue_summary", SAMPLE_DATA, null, priorContent);
+      expect(prompt).toContain("REWRITE");
+      expect(prompt).toContain("PRIOR YEAR SECTION");
+      expect(prompt).toContain("Prior year revenue totaled $5.2M");
+      expect(prompt).toContain("Revenue by Source");
+      expect(prompt).toContain("Revenue Trends");
+      expect(prompt).toContain("Property tax is the primary revenue source");
+    });
+
+    it("truncates prior narrative longer than 3000 chars", () => {
+      const longNarrative = "A".repeat(4000);
+      const priorContent = {
+        sectionType: "revenue_summary",
+        narrative: longNarrative,
+        tables: [],
+        chartDescriptions: [],
+        pageCount: 5,
+        keyFindings: [],
+      };
+
+      const prompt = budgetBookDocType.getSectionPrompt("revenue_summary", SAMPLE_DATA, null, priorContent);
+      expect(prompt).toContain("REWRITE");
+      expect(prompt).toContain("[... truncated for length]");
+      expect(prompt).not.toContain("A".repeat(4000));
+    });
+
+    it("includes full style guidance when style available", () => {
+      const style = {
+        colorScheme: { primary: "#1a365d", secondary: "#2d4a7a", accent: "#3182ce", headerBackground: "#e2e8f0", textColor: "#1a202c" },
+        typography: { headingStyle: "Bold sans-serif", bodyStyle: "Regular serif", estimatedBodySize: 10 },
+        layout: { columnCount: 1, hasMarginNotes: false, headerFooterStyle: "Simple", pageNumberPlacement: "bottom-center" },
+        chartTypes: ["bar", "pie"],
+        narrativeTone: "formal",
+        sectionOrder: [],
+        brandingElements: [],
+        overallStyle: "Professional municipal style",
+      };
+
+      const prompt = budgetBookDocType.getSectionPrompt("revenue_summary", SAMPLE_DATA, style, null);
+      expect(prompt).toContain("Heading style: Bold sans-serif");
+      expect(prompt).toContain("Body style: Regular serif");
+      expect(prompt).toContain("primary #1a365d");
+      expect(prompt).toContain("1 column(s)");
+    });
   });
 });

@@ -11,7 +11,7 @@
 import type { PipelineStep, PipelineContext, StepResult } from "../types.js";
 import type { SectionOutput, DocumentTypeDefinition } from "../../doc-type.js";
 import type { EngineContext } from "../../context.js";
-import type { StyleAnalysis } from "../../types.js";
+import type { StyleAnalysis, PriorSectionContent } from "../../types.js";
 import { buildAgentPrompt } from "../../agents/index.js";
 import { updateJobStatus } from "../executor.js";
 
@@ -22,7 +22,8 @@ export async function generateSection(
   docType: DocumentTypeDefinition,
   sectionType: string,
   data: unknown,
-  styleAnalysis: StyleAnalysis | null
+  styleAnalysis: StyleAnalysis | null,
+  priorContent?: PriorSectionContent | null
 ): Promise<SectionOutput> {
   const creatorAgent = docType.getAgent(docType.creatorAgentType);
   const systemPrompt = await buildAgentPrompt(
@@ -31,7 +32,7 @@ export async function generateSection(
     ctx.tenantId,
     creatorAgent.baseSystemPrompt
   );
-  const userPrompt = docType.getSectionPrompt(sectionType, data, styleAnalysis);
+  const userPrompt = docType.getSectionPrompt(sectionType, data, styleAnalysis, priorContent);
 
   const result = await ctx.ai.callJson<SectionOutput>(systemPrompt, userPrompt, {
     maxTokens: creatorAgent.maxTokens,
@@ -58,7 +59,9 @@ export const generateSectionsStep: PipelineStep = {
   async execute(pCtx: PipelineContext): Promise<StepResult> {
     const { ctx, docType, documentId, state } = pCtx;
     const sections: SectionOutput[] = [];
-    const allSectionSpecs = docType.sectionTypes;
+    const allSectionSpecs = state.effectiveSections.length > 0
+      ? state.effectiveSections
+      : docType.sectionTypes;
     const contentSpecs = allSectionSpecs.filter((s) => !s.structural);
     const structuralSpecs = allSectionSpecs.filter((s) => s.structural);
 
@@ -77,7 +80,7 @@ export const generateSectionsStep: PipelineStep = {
 
     const parallelResults = await Promise.all(
       parallelSpecs.map((spec) =>
-        generateSection(ctx, docType, spec.id, state.documentData, state.styleAnalysis)
+        generateSection(ctx, docType, spec.id, state.documentData, state.styleAnalysis, state.priorContent.get(spec.id))
       )
     );
     sections.push(...parallelResults);
@@ -99,7 +102,8 @@ export const generateSectionsStep: PipelineStep = {
         docType,
         spec.id,
         state.documentData,
-        state.styleAnalysis
+        state.styleAnalysis,
+        state.priorContent.get(spec.id)
       );
       sections.push(section);
     }
@@ -107,7 +111,7 @@ export const generateSectionsStep: PipelineStep = {
     // Generate structural sections (cover, toc)
     const structuralResults = await Promise.all(
       structuralSpecs.map((spec) =>
-        generateSection(ctx, docType, spec.id, state.documentData, state.styleAnalysis)
+        generateSection(ctx, docType, spec.id, state.documentData, state.styleAnalysis, state.priorContent.get(spec.id))
       )
     );
     sections.push(...structuralResults);

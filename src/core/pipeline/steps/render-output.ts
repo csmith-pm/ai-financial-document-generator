@@ -62,13 +62,20 @@ export const renderOutputStep: PipelineStep = {
     const pdfKey = `${ctx.tenantId}/${docType.storagePrefix}/${documentId}/${docType.id}-fy${state.fiscalYear}.pdf`;
     await ctx.storage.upload(pdfKey, pdfBuffer, "application/pdf");
 
+    // Build web preview data — include layoutSpec when available
+    const webPreviewData: Record<string, unknown> = {
+      sections: state.sections,
+    };
+    if (state.layoutSpec) {
+      webPreviewData.layoutSpec = state.layoutSpec;
+    }
+
     // Update document record
     await ctx.db
       .update(documents)
       .set({
         generatedPdfS3Key: pdfKey,
-        webPreviewData:
-          state.sections as unknown as Record<string, unknown>,
+        webPreviewData,
         updatedAt: new Date(),
       })
       .where(eq(documents.id, documentId));

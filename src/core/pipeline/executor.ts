@@ -74,6 +74,9 @@ export function createInitialState(overrides?: Partial<PipelineState>): Pipeline
   return {
     document: null,
     styleAnalysis: null,
+    documentIndex: null,
+    priorContent: new Map(),
+    effectiveSections: [],
     documentData: null,
     sections: [],
     fiscalYear: new Date().getFullYear(),
@@ -81,6 +84,8 @@ export function createInitialState(overrides?: Partial<PipelineState>): Pipeline
     iteration: 0,
     maxIterations: 3,
     previousScores: new Map(),
+    layoutSpec: null,
+    componentRegistry: null,
     ...overrides,
   };
 }
@@ -110,7 +115,14 @@ export async function runPipeline(
 
   try {
     for (const step of steps) {
+      // Auto-mark step as running
+      await updateJobStatus(ctx.db, documentId, step.id, "running", 0, `Running ${step.name}...`);
+
       const result = await step.execute(pCtx);
+
+      // Auto-mark step as completed (steps may have already updated progress internally)
+      const msg = result.message ?? (result.status === "skipped" ? "Skipped" : `${step.name} complete`);
+      await updateJobStatus(ctx.db, documentId, step.id, "completed", 100, msg);
 
       if (result.status === "skipped") {
         console.log(
@@ -119,8 +131,11 @@ export async function runPipeline(
       }
     }
   } catch (error) {
+    const cause = error instanceof Error && error.cause
+      ? ` | Cause: ${error.cause instanceof Error ? error.cause.message : String(error.cause)}`
+      : "";
     const message =
-      error instanceof Error ? error.message : "Unknown error";
+      (error instanceof Error ? error.message : "Unknown error") + cause;
 
     // Set document status to failed
     await updateBookStatus(pCtx.ctx.db, documentId, "failed");

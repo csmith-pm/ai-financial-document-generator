@@ -1,0 +1,18 @@
+{
+  "name": "Bristol FY2027 Budget Book",
+  "description": "City of Bristol, CT — full municipal budget book with operating budget data and prior-year budget book PDF (472 pages)",
+  "docType": "budget_book",
+  "fiscalYear": 2027,
+  "tenantId": "eval-bristol",
+  "dataFiles": ["operating-budget.xlsx"],
+  "priorDocumentPdf": "prior-year-budget-book.pdf",
+  "expectations": {
+    "minPageCount": 150,
+    "maxPageCount": 250,
+    "expectedSections": 18,
+    "minGfoaScore": 60,
+    "minAdaScore": 70,
+    "requiredSections": ["executive_summary", "revenue_summary", "expenditure_summary", "community_profile"],
+    "requiredDataPresent": ["revenueDetail", "expenditureByDepartment"]
+  }
+}
